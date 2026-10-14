@@ -89,6 +89,7 @@
     background: var(--calc); border: 1px solid #b9b6b6; padding: 2px 5px; min-height: 24px;
     border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  .bike { display: grid; grid-template-columns: 1fr 1.4fr 96px; gap: 4px; }
   .rack { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
   .rack:empty, .rackrow:has(+ .rack:empty) { display: none; }
   .rack button { font-size: 12px; padding: 2px 4px 2px 9px; border-radius: 12px; display: inline-flex; gap: 4px; align-items: center; }
@@ -260,9 +261,15 @@
     <input id="training" data-k="training" class="span5" placeholder="z.B. 4x8min (4min)">
     <label for="surface">Indoor/Outdoor</label>
     <input id="surface" data-k="surface" class="span5" list="ioList" placeholder="Outdoor, Indoor (Rolle) …" autocomplete="off">
-    <label for="bike">Velo</label>
-    <input id="bike" data-k="bike" class="span3" list="bikeList" placeholder="Road, TT, Gravel, MTB …" autocomplete="off">
+    <label for="bikeBrand">Velo</label>
+    <div class="span3 bike">
+      <input id="bikeBrand" data-k="bikeBrand" list="bikeBrandList" placeholder="Mark" autocomplete="off">
+      <input id="bikeModel" data-k="bikeModel" list="bikeModelList" placeholder="Modell" autocomplete="off" aria-label="Modell">
+      <input id="bikeType" data-k="bikeType" list="bikeTypeList" placeholder="Typ" autocomplete="off" aria-label="Typ (Road, TT, Gravel, MTB, Indoor)">
+    </div>
     <span style="grid-column: span 2"></span>
+    <span class="rackrow"></span>
+    <div class="span5 rack rackrow" id="rack"></div>
     <label for="nutrition">Nutritioun</label>
     <input id="nutrition" data-k="nutrition" class="span3">
     <span style="grid-column: span 2"></span>
@@ -332,7 +339,9 @@
     <label class="tgl" title="Nëmmen d'Weisen (Tabell, PDF, Excel): gerechent gëtt ëmmer mat de genaue Zäiten"><input type="checkbox" id="tenths"> Zäite just op Zéngtel (7:38,2 amplaz 7:38,15)</label>
   </div>
   <datalist id="ioList"><option value="Outdoor"><option value="Indoor (Rolle)"><option value="Indoor (Zwift)"></datalist>
-  <datalist id="bikeList"></datalist>
+  <datalist id="bikeBrandList"></datalist>
+  <datalist id="bikeModelList"></datalist>
+  <datalist id="bikeTypeList"></datalist>
   <datalist id="distList">
     <option value="5"><option value="10"><option value="20"><option value="30"><option value="40"><option value="50"><option value="100">
   </datalist>
@@ -427,7 +436,7 @@
                             pTime:'', pHr:'', pLac:'', pNote:'' });
   const defaults = () => ({
     name:'', wattThr:'', hrThr:'', date:new Date().toISOString().slice(0,10), clock:'',
-    training:'', surface:'', bike:'', nutrition:'', partner:'', temp:'', wind:'',
+    training:'', surface:'', bike:'', bikeBrand:'', bikeModel:'', bikeType:'', nutrition:'', partner:'', temp:'', wind:'',
     lacMin:'1,5', lacMax:'5,0', rWattMin:'', rWattMax:'', rHrMin:'', rHrMax:'', rPhrMin:'', rPhrMax:'', tenths:false, comment:'', place:'Diekirch', wxLat:'', wxLon:'', wxAuto:null,
     reps: Array.from({length:6}, blankRep)
   });
@@ -435,6 +444,8 @@
   let S;
   try { S = JSON.parse(localStorage.getItem(STORE)) || defaults(); } catch { S = defaults(); }
   S = Object.assign(defaults(), S);
+  // older saves have only one "bike" text → model field (the brand is split off once bikes.json is loaded)
+  if (S.bike && !S.bikeBrand && !S.bikeModel && !S.bikeType) S.bikeModel = S.bike;
 
   // ---------- parsing / formatting ----------
   const num = s => {
@@ -631,6 +642,9 @@
     if (repT) parts.push(`Belaaschtungszäit: <b>${fmtHMS(repT)}</b>`);
     $('summary').innerHTML = parts.join('');
     $('commentPrint').textContent = S.comment;
+    // Excel C11 „Velo (road, TT,...)“: "Canyon Aeroad (Road)"
+    const bm = [S.bikeBrand, S.bikeModel].map(x => String(x || '').trim()).filter(Boolean).join(' '), bt = String(S.bikeType || '').trim();
+    S.bike = bm && bt ? `${bm} (${bt})` : bm || bt;
     if (!wxBusy) $('wxNote').textContent = wxIsAuto() ? `Temperatur a Wand vun Open-Meteo (${S.wxAuto.src}). Selwer iwwerschreiwen geet ëmmer.` : '';
 
     try { localStorage.setItem(STORE, JSON.stringify(S)); } catch {}
@@ -701,7 +715,7 @@
 
   $('btnNew').onclick = () => {
     if (!confirm('Neien Training ufänken? Num, Schwellen, MIN/MAX-Wäerter, Velo a Laktat-Grenzen bleiwen.')) return;
-    const keep = {name:S.name, wattThr:S.wattThr, hrThr:S.hrThr, bike:S.bike, lacMin:S.lacMin, lacMax:S.lacMax, place:S.place,
+    const keep = {name:S.name, wattThr:S.wattThr, hrThr:S.hrThr, bike:S.bike, bikeBrand:S.bikeBrand, bikeModel:S.bikeModel, bikeType:S.bikeType, lacMin:S.lacMin, lacMax:S.lacMax, place:S.place,
                   rWattMin:S.rWattMin, rWattMax:S.rWattMax, rHrMin:S.rHrMin, rHrMax:S.rHrMax, rPhrMin:S.rPhrMin, rPhrMax:S.rPhrMax, tenths:S.tenths};
     S = Object.assign(defaults(), keep);
     fillMeta(); buildRows(); calc(); showTimes();
@@ -1921,21 +1935,79 @@
     } finally { if (id === wxReq && wxBusy) { wxBusy = false; calc(); } }
   }
 
-  // ================= Bikes: types + the rider's last bikes (only in this browser) =================
-  const GARAGE = 'velo-garage', BIKE_TYPES = ['Road', 'TT', 'Gravel', 'MTB', 'Indoor-Trainer'];
-  const garageGet = () => { try { return JSON.parse(localStorage.getItem(GARAGE)) || []; } catch { return []; } };
-  function fillBikes() {
-    const own = garageGet();
-    $('bikeList').innerHTML = [...own, ...BIKE_TYPES.filter(t => !own.some(b => b.toLowerCase() === t.toLowerCase()))]
-      .map(v => `<option value="${String(v).replace(/"/g, '&quot;')}">`).join('');
+  // ================= Bikes: list from bikes.json + the rider's own bikes (only in this browser) =================
+  const BIKES_URL = location.protocol.startsWith('http') ? 'bikes.json' : 'https://pugu-prog.github.io/sauerbeen/velo/bikes.json';
+  const RACK = 'velo-garage';
+  let BIKES = {}, TYPES = ['Road', 'TT', 'Gravel', 'MTB', 'Indoor'];
+  const opt = v => `<option value="${String(v).replace(/"/g, '&quot;')}">`;
+  const ci = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+  const brandOf = b => Object.keys(BIKES).find(k => ci(k, b));
+  // all models of a brand (or of every brand) as [model, type, brand]
+  const modelsOf = b => Object.entries(BIKES).filter(([k]) => !b || k === b)
+    .flatMap(([k, types]) => Object.entries(types).flatMap(([t, ms]) => ms.map(m => [m, t, k])));
+  function fillModels() {
+    const b = brandOf(S.bikeBrand);
+    // known brand: its models (of the chosen type first); nothing typed: every model so typing "Aeroad" finds it
+    const list = b ? modelsOf(b) : S.bikeBrand ? [] : modelsOf();
+    const t = String(S.bikeType || '').trim();
+    list.sort((x, y) => (t && ci(y[1], t)) - (t && ci(x[1], t)) || x[0].localeCompare(y[0]));
+    $('bikeModelList').innerHTML = [...new Set(list.map(x => x[0]))].map(opt).join('');
   }
-  $('bike').addEventListener('change', () => {
-    const b = String(S.bike || '').trim(); if (!b) return;
-    const g = [b, ...garageGet().filter(x => x.toLowerCase() !== b.toLowerCase())].slice(0, 8);
-    try { localStorage.setItem(GARAGE, JSON.stringify(g)); } catch {}
-    fillBikes();
+  const rackGet = () => { try { return (JSON.parse(localStorage.getItem(RACK)) || []).filter(x => x && typeof x === 'object'); } catch { return []; } };
+  const rackSet = r => { try { localStorage.setItem(RACK, JSON.stringify(r)); } catch {} };
+  const bikeKey = o => [o.b, o.m, o.t].join('|').toLowerCase();
+  function rackAdd() {
+    const o = { b: S.bikeBrand.trim(), m: S.bikeModel.trim(), t: S.bikeType.trim() };
+    if (!o.b || !o.m) return;
+    // the same bike with another (or no) type is replaced
+    const r = rackGet().filter(x => !(ci(x.b, o.b) && ci(x.m, o.m)));
+    r.unshift(o); rackSet(r.slice(0, 8)); renderRack();
+  }
+  function renderRack() {
+    const cur = bikeKey({ b: S.bikeBrand.trim(), m: S.bikeModel.trim(), t: S.bikeType.trim() });
+    $('rack').innerHTML = rackGet().filter(x => bikeKey(x) !== cur).map(x =>
+      `<button type="button" data-rack="${bikeKey(x).replace(/"/g, '&quot;')}" title="Dëse Velo wielen">${[x.b, x.m].filter(Boolean).join(' ').replace(/</g, '&lt;')}${x.t ? ' · ' + x.t.replace(/</g, '&lt;') : ''}<i data-del="1" title="Aus dem Velosstall läschen">×</i></button>`
+    ).join('');
+    if ($('rack').innerHTML) $('rack').insertAdjacentHTML('afterbegin', '<span>Mäi Velosstall:</span>');
+  }
+  $('rack').addEventListener('click', e => {
+    const b = e.target.closest('button[data-rack]'); if (!b) return;
+    const key = b.dataset.rack;
+    if (e.target.dataset.del) { rackSet(rackGet().filter(x => bikeKey(x) !== key)); renderRack(); return; }
+    const x = rackGet().find(y => bikeKey(y) === key); if (!x) return;
+    Object.assign(S, { bikeBrand: x.b, bikeModel: x.m, bikeType: x.t || '' });
+    fillMeta(); fillModels(); calc(); rackAdd();
   });
-  fillBikes();
+  ['bikeBrand', 'bikeModel', 'bikeType'].forEach(id => $(id).addEventListener('change', () => {
+    if (id === 'bikeBrand') { const b = brandOf(S.bikeBrand); if (b && b !== S.bikeBrand) { S.bikeBrand = b; $('bikeBrand').value = b; } }
+    if (id === 'bikeType') { const t = TYPES.find(x => ci(x, S.bikeType)); if (t && t !== S.bikeType) { S.bikeType = t; $('bikeType').value = t; } }
+    if (id === 'bikeModel') {
+      // model from the list → its brand (if still empty) and its type
+      const hits = modelsOf(brandOf(S.bikeBrand)).filter(x => ci(x[0], S.bikeModel));
+      if (!S.bikeBrand.trim() && new Set(hits.map(x => x[2])).size === 1) { S.bikeBrand = hits[0][2]; $('bikeBrand').value = hits[0][2]; }
+      if (hits.length) { S.bikeType = hits[0][1]; $('bikeType').value = hits[0][1]; }   // the type follows the model
+      if (hits.length) { S.bikeModel = hits[0][0]; $('bikeModel').value = hits[0][0]; }
+    }
+    // an indoor trainer: "Indoor" also goes into Indoor/Outdoor when that is still empty
+    if (ci(S.bikeType, 'Indoor') && !String(S.surface || '').trim()) { S.surface = 'Indoor (Rolle)'; $('surface').value = S.surface; }
+    fillModels(); calc();
+  }));
+  // remember the bike once the rider leaves the three bike fields
+  document.querySelector('.bike').addEventListener('focusout', () => setTimeout(() => {
+    if (!document.querySelector('.bike').contains(document.activeElement)) rackAdd();
+  }));
+  $('bikeBrand').addEventListener('input', fillModels);
+  $('bikeType').addEventListener('input', fillModels);
+  function initBikes() {
+    const b = !S.bikeBrand && Object.keys(BIKES).find(k => S.bikeModel.toLowerCase().startsWith(k.toLowerCase() + ' '));
+    if (b) { Object.assign(S, { bikeBrand: b, bikeModel: S.bikeModel.slice(b.length).trim() }); fillMeta(); calc(); }
+    const hit = !S.bikeType && modelsOf(brandOf(S.bikeBrand)).find(x => ci(x[0], S.bikeModel));
+    if (hit) { S.bikeType = hit[1]; fillMeta(); calc(); }
+    $('bikeBrandList').innerHTML = Object.keys(BIKES).sort((a, b) => a.localeCompare(b)).map(opt).join('');
+    $('bikeTypeList').innerHTML = TYPES.map(opt).join('');
+    fillModels(); renderRack();
+  }
+  fetch(BIKES_URL).then(r => r.ok ? r.json() : {}).then(j => { BIKES = j.brands || {}; if (Array.isArray(j.types)) TYPES = j.types; }).catch(() => {}).finally(initBikes);
   window.veloImport = { importFile, parsePlan, parseLaps, parseFIT, evaluate, mergePlan, combine };   // for testing
   // for the SauerBeen app: a FIT/TCX/GPX/ZIP file shared to the app is handed over as base64 → import dialog
   window.SauerBeen = {
