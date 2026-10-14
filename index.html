@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="lb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SauerBeen Trainingsfeedback</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Titillium+Web:wght@700;900&display=swap">
+<style>
+  /* SauerBeen look (wéi d'Feedback-Tools): navy, giel, Titillium Web Black + Inter */
+  :root { --sb-blue: #293d96; --sb-blue-dark: #1f2e72; --sb-yellow: #ffed00; --text: #414141; --muted: #6b6b70; --bg: #eef0f6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; }
+  header { background: var(--sb-blue); color: #fff; padding: 28px 16px 34px; text-align: center; }
+  header img { height: 64px; width: auto; display: block; margin: 0 auto 12px; }
+  header h1 { margin: 0; font: 900 26px/1.1 "Titillium Web", Inter, sans-serif; text-transform: uppercase; letter-spacing: .03em; }
+  header p { margin: 8px auto 0; max-width: 520px; opacity: .9; }
+  main { max-width: 760px; margin: -18px auto 32px; padding: 0 16px; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+  .card {
+    display: flex; flex-direction: column; gap: 6px; padding: 20px 18px; border-radius: 10px; background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.12); color: inherit; text-decoration: none; border-top: 5px solid var(--sb-yellow);
+  }
+  a.card:hover { box-shadow: 0 4px 14px rgba(41,61,150,.22); }
+  a.card:focus-visible { outline: 3px solid var(--sb-yellow); outline-offset: 2px; }
+  .card .ico { font-size: 30px; line-height: 1; }
+  .card h2 { margin: 4px 0 0; font: 900 21px/1.1 "Titillium Web", Inter, sans-serif; color: var(--sb-blue); text-transform: uppercase; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; }
+  .card .go { margin-top: auto; padding-top: 10px; font-weight: 600; color: var(--sb-blue); }
+  .card.soon { opacity: .6; border-top-color: #c3c8da; box-shadow: none; border: 1px dashed #c3c8da; border-top-width: 5px; }
+  .card.soon .go { color: var(--muted); }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 0 16px 28px; }
+  footer a { color: var(--sb-blue); }
+</style>
+</head>
+<body>
+<header>
+  <img src="sauerbeen-schriftzug.png" alt="SauerBeen">
+  <h1>Trainingsfeedback</h1>
+  <p>Training aginn oder vun der Auer importéieren, als PDF fir den Trainer oder als Excel.</p>
+</header>
+<main>
+  <a class="card" href="https://pugu-prog.github.io/lafen-feedback/">
+    <span class="ico" aria-hidden="true">🏃</span>
+    <h2>Lafen</h2>
+    <p>Pace, HR, Laktat pro Rep. Import vu FIT/TCX, Screenshot oder Trainingsplang.</p>
+    <span class="go">Opmaachen →</span>
+  </a>
+  <a class="card" href="velo/">
+    <span class="ico" aria-hidden="true">🚴</span>
+    <h2>Velo</h2>
+    <p>Watt, HR, Laktat pro Rep. Import vu FIT/TCX, Screenshot oder Trainingsplang.</p>
+    <span class="go">Opmaachen →</span>
+  </a>
+  <div class="card soon" aria-disabled="true">
+    <span class="ico" aria-hidden="true">🏊</span>
+    <h2>Schwammen</h2>
+    <p>Kënnt spéider.</p>
+    <span class="go">Geschwënn</span>
+  </div>
+</main>
+<footer>Problem oder Iddi? <a href="https://form.jotform.com/262735789931069" target="_blank" rel="noopener">Feedback-Formulaire</a></footer>
+</body>
+</html>

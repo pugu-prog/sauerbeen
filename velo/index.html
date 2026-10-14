@@ -1,0 +1,1953 @@
+<!doctype html>
+<html lang="lb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SauerBeen Trainingsfeedback Velo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Titillium+Web:wght@700;900&display=swap">
+<style>
+  /* SauerBeen look (sauerbeen.lu): navy bar, yellow accent, Titillium Web Black + Inter.
+     The sheet itself keeps the Excel colours: blue inputs, grey results, red/yellow/green scale. */
+  :root {
+    --sb-blue: #293d96;
+    --sb-blue-dark: #1f2e72;
+    --sb-yellow: #ffed00;
+    --sb-purple: #571170;
+    --input: #cfe0f3;
+    --input-line: #8fb0d6;
+    --calc: #e3e1e1;
+    --note: #f765cd;
+    --head: #63be7b;
+    --line: #222;
+    --text: #414141;
+    --muted: #6b6b70;
+    --bg: #eef0f6;
+    --paper: #fff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.4 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 10px 16px; background: var(--sb-blue); color: #fff;
+  }
+  .toolbar h1 {
+    display: flex; align-items: center; gap: 10px; margin: 0 auto 0 0;
+    font: 900 18px/1 "Titillium Web", Inter, sans-serif; letter-spacing: .02em; text-transform: uppercase;
+  }
+  .toolbar h1 .sub { font-weight: 700; opacity: .9; }
+  /* SauerBeen Schrëftzuch (wäiss, transparent): sauerbeen-schriftzug.png */
+  .sblogo { display: block; height: 30px; width: auto; flex: none; }
+  button {
+    font: inherit; font-weight: 500; padding: 6px 14px; border-radius: 18px; cursor: pointer;
+    border: 1px solid #c3c8da; background: #fff; color: var(--sb-blue);
+  }
+  button:hover { background: #f1f3fa; }
+  button:focus-visible { outline: 2px solid var(--sb-yellow); outline-offset: 2px; }
+  button.primary { background: var(--sb-blue); border-color: var(--sb-blue); color: #fff; }
+  button.primary:hover { background: var(--sb-blue-dark); }
+  .toolbar button, .toolbar a.btn { background: transparent; border: 1px solid rgba(255,255,255,.7); color: #fff; }
+  .toolbar a.btn { font-weight: 500; padding: 6px 14px; border-radius: 18px; text-decoration: none; }
+  .toolbar a.btn:hover { background: rgba(255,255,255,.12); }
+  .toolbar button:hover { background: rgba(255,255,255,.12); }
+  .toolbar button.primary { background: var(--sb-yellow); border-color: var(--sb-yellow); color: var(--sb-blue); font-weight: 600; }
+  .toolbar button.primary:hover { background: #fff36b; }
+  .sheet {
+    max-width: 980px; margin: 16px auto; padding: 20px 24px 28px;
+    background: var(--paper); box-shadow: 0 1px 4px rgba(0,0,0,.12);
+  }
+  .note {
+    background: #eef1fb; border-left: 4px solid var(--sb-yellow); color: var(--sb-blue);
+    padding: 5px 10px; margin: 0 0 12px; font-size: 13px;
+  }
+  .note .k { display: inline-block; width: 12px; height: 12px; vertical-align: -1px; margin: 0 3px 0 8px; border: 1px solid #555; }
+
+  /* Header block */
+  .meta {
+    display: grid; grid-template-columns: 130px 1fr 110px 90px 100px 90px; gap: 3px 6px;
+    align-items: center; margin-bottom: 14px;
+  }
+  .meta label { text-align: right; color: #333; }
+  .meta .span2 { grid-column: span 2; }
+  .meta .span3 { grid-column: span 3; }
+  .meta .span5 { grid-column: span 5; }
+  input, textarea {
+    font: inherit; color: inherit; width: 100%; min-width: 0;
+    border: 1px solid var(--input-line); background: var(--input);
+    padding: 2px 5px; border-radius: 2px;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--sb-blue); outline-offset: -1px; background: #fff; }
+  input.num { text-align: right; }
+  input.bad { outline: 2px solid #d33; }
+  input.ref { text-align: right; }
+  input.ref.own { font-weight: 700; }                 /* own value instead of the Excel formula */
+  .calc {
+    background: var(--calc); border: 1px solid #b9b6b6; padding: 2px 5px; min-height: 24px;
+    border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rack { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+  .rack:empty, .rackrow:has(+ .rack:empty) { display: none; }
+  .rack button { font-size: 12px; padding: 2px 4px 2px 9px; border-radius: 12px; display: inline-flex; gap: 4px; align-items: center; }
+  .rack button i { font-style: normal; color: #999; padding: 0 4px; border-radius: 8px; }
+  .rack button i:hover { color: #d33; background: #fbe3e3; }
+  .unit { position: relative; }
+  .unit input { padding-right: 38px; }
+  .unit span { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 12px; pointer-events: none; }
+
+  /* Table */
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 760px; }
+  th, td { border: 1px solid #999; padding: 0; height: 26px; text-align: center; }
+  th { font-weight: normal; padding: 2px 4px; background: #fff; }
+  td.lbl { padding: 0 6px; }
+  td.right { text-align: right; padding: 0 6px; }
+  td input { border: 0; border-radius: 0; height: 100%; background: transparent; padding: 3px 6px; }
+  td.in { background: var(--input); }
+  td.cs input { background: transparent; }
+  td.out { padding: 0 6px; text-align: right; font-variant-numeric: tabular-nums; }
+  .ref td, .ref th { border-color: var(--line); }
+  .sec { background: var(--sb-blue); color: #fff; font: 900 14px "Titillium Web", Inter, sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+  tr.colhead th { border-top: 2px solid var(--line); border-bottom: 2px solid var(--line); }
+  tr.pause td:first-child { color: #444; }
+  tr.rep td:first-child { font-weight: 600; }
+  tr.tot td { border: 0; height: 28px; }
+  tr.tot td.calc { border: 1px solid #b9b6b6; text-align: right; padding: 0 6px; }
+  td.del { border: 0; width: 28px; }
+  td.del button { border: 0; background: none; color: #aaa; padding: 0 4px; font-size: 16px; }
+  td.del button:hover { color: #d33; }
+  .rowbtns { display: flex; gap: 8px; margin: 8px 0 14px; flex-wrap: wrap; }
+  .comment { display: grid; grid-template-columns: 110px 1fr; gap: 6px; align-items: start; margin-top: 12px; }
+  .comment b { padding-top: 4px; }
+  textarea { min-height: 70px; resize: vertical; }
+  .summary { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; color: #333; font-size: 13px; }
+  .summary b { font-variant-numeric: tabular-nums; }
+  .printonly, .commentprint { display: none; }
+  .tip { color: var(--muted); font-size: 12px; margin-top: 18px; }
+  .wxnote { font-size: 12px; color: var(--muted); }
+
+  @media screen and (max-width: 720px) {
+    .sheet { padding: 14px 16px; margin: 0; box-shadow: none; }
+    .meta { grid-template-columns: 110px 1fr; }
+    .meta .span2, .meta .span3, .meta .span5 { grid-column: span 1; }
+    .meta label { text-align: left; }
+  }
+
+  @page { size: A4 portrait; margin: 12mm 10mm; }
+  @media print {
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: #fff; font-size: 11px; }
+    .toolbar, .noprint, .rowbtns, td.del, th.del, .tip, .note, .rackrow { display: none !important; }
+    .sheet { box-shadow: none; margin: 0; padding: 0; max-width: none; }
+    .printonly { display: block; }
+    .ptitle { display: flex !important; align-items: center; gap: 10px; background: var(--sb-blue); color: #fff;
+              font: 900 15px "Titillium Web", Inter, sans-serif; text-transform: uppercase; padding: 6px 10px; margin: 0 0 8px; }
+    .ptitle .sblogo { height: 24px; }
+    input, textarea { border-color: transparent; background: transparent; }
+    .meta input { background: var(--input); border-color: var(--input-line); }
+    td.in, td.in input { background: transparent; }
+    tr.empty { display: none; }
+    table { min-width: 0; }
+    th, td { height: 20px; }
+    textarea { display: none; }
+    .commentprint { display: block !important; white-space: pre-wrap; border: 1px solid var(--input-line); background: var(--input); padding: 4px 6px; min-height: 40px; }
+    .tablewrap { overflow: visible; }
+  }
+
+  /* Import dialog */
+  dialog#imp {
+    width: min(860px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 18px 20px;
+    border: 1px solid #bbb; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,.25);
+  }
+  dialog#imp::backdrop { background: rgba(20,25,35,.45); }
+  #imp h2 { font: 900 20px "Titillium Web", Inter, sans-serif; color: var(--sb-blue); text-transform: uppercase; margin: 0 0 4px; }
+  #imp .hint { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  #imp .row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 10px 0; }
+  #imp .row label { display: inline-flex; gap: 5px; align-items: center; }
+  #imp .row input[type=radio] { width: auto; }
+  #impStatus { font-size: 13px; color: var(--sb-blue); min-height: 18px; }
+  #impStatus.err { color: #c22; }
+  #impDays { display: flex; flex-wrap: wrap; gap: 6px; }
+  #impDays button { font-size: 13px; padding: 4px 10px; }
+  #impDays button.on { background: var(--sb-blue); border-color: var(--sb-blue); color: #fff; }
+  #impText { min-height: 110px; font: 12px/1.4 ui-monospace, Menlo, monospace; }
+  #imp details { margin: 10px 0; }
+  #imp summary { cursor: pointer; font-size: 13px; }
+  #impPrevWrap { overflow-x: auto; max-height: 45vh; overflow-y: auto; border: 1px solid #ddd; }
+  #impPrev { min-width: 560px; }
+  #impPrev th { position: sticky; top: 0; background: #f2f2f2; font-size: 12px; }
+  #impPrev td { height: 28px; }
+  #impPrev select { font: inherit; border: 0; background: transparent; width: 100%; padding: 3px; }
+  #impPrev tr.t-rep td:first-child { background: #e6f2e9; }
+  #impPrev tr.t-pause td:first-child { background: #fbf3d9; }
+  #impPrev tr.t-skip td { color: #999; }
+  #impPrev tr.t-skip input { color: #999; text-decoration: line-through; }
+  .zones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0; }
+  @media (max-width: 560px) { .zones { grid-template-columns: 1fr; } }
+  .zone {
+    display: grid; gap: 2px; place-items: center; align-content: center; text-align: center; cursor: pointer; position: relative;
+    border: 2px dashed var(--input-line); border-radius: 8px; background: #f3f8fd; padding: 14px 10px; min-height: 96px;
+  }
+  .zone b { color: var(--sb-blue); }
+  .zone span { font-size: 12px; color: var(--muted); }
+  .zone .got { color: #1d7a3a; font-weight: 600; font-size: 12px; }
+  .zone .got:empty { display: none; }
+  .zone.has { border-style: solid; border-color: #63be7b; background: #eef8f1; }
+  .zone input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  body.dragging .zone { border-color: var(--sb-blue); background: #e3e8f8; }
+  .zone.over { border-color: var(--sb-blue); background: #d3dcf6; border-style: solid; }
+  #dropAll {
+    position: fixed; inset: 0; z-index: 50; display: none; place-items: center;
+    background: rgba(41,61,150,.15); border: 4px dashed var(--sb-blue); font: 900 24px "Titillium Web", Inter, sans-serif; color: var(--sb-blue);
+  }
+  body.dragging #dropAll { display: grid; }
+  @media print { #dropAll { display: none !important; } }
+  #stravaBox { border: 1px solid #f3c7a8; background: #fff6ef; border-radius: 6px; padding: 8px 10px; margin: 10px 0; }
+  #stravaBox[hidden] { display: none; }
+  #stravaBtn { background: #fc4c02; border-color: #fc4c02; color: #fff; }
+  #stravaList { display: grid; gap: 4px; margin-top: 8px; max-height: 30vh; overflow-y: auto; }
+  #stravaList button { text-align: left; font-size: 13px; display: flex; justify-content: space-between; gap: 10px; }
+  #stravaList small { color: var(--muted); white-space: nowrap; }
+  #stravaOff { font-size: 12px; color: var(--muted); background: none; border: 0; text-decoration: underline; padding: 0 4px; }
+  #imp .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  .rowbtns .tgl { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--sb-blue); font-size: 13px; cursor: pointer; }
+  .rowbtns .tgl input { width: auto; }
+  .rowbtns .tgl + .tgl { margin-left: 0; }
+  .rowbtns select { font: inherit; padding: 5px 10px; border-radius: 18px; border: 1px solid #c3c8da; background: #fff; color: var(--sb-blue); }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1><img class="sblogo" src="sauerbeen-schriftzug.png" alt="SauerBeen"><span class="sub">Trainingsfeedback Velo</span></h1>
+  <button id="btnImport" title="Reps a Pausen aus FIT/TCX/GPX, Screenshot, Strava oder Trainingsplang uleeën">Training importéieren</button>
+  <button id="btnNew" title="Trainingsdaten eidelmaachen, Num/Schwellen/Velo bleiwen">Neien Training</button>
+  <button id="btnSave" title="Als JSON-Fichier späicheren">Späicheren</button>
+  <button id="btnLoad" title="JSON-Fichier lueden">Lueden</button>
+  <button id="btnXlsx" title="Als Excel-Fichier, wéi déi al Vorlag (Formelen a Faarwen am Excel)">Excel</button>
+  <input type="file" id="fileIn" accept=".json,application/json" hidden>
+  <a class="btn" href="https://form.jotform.com/262735789931069" target="_blank" rel="noopener" title="Problem gemellt oder Iddi? Kuerze Formulaire fir d'Testpersounen">Feedback</a>
+  <button id="btnPdf" class="primary">PDF fir den Trainer</button>
+</div>
+
+<div class="sheet">
+  <p class="note">Blo Casen w.e.gl. ausfëllen, gro gëtt berechent.
+    <span class="k" style="background:var(--input)"></span>Agab
+    <span class="k" style="background:var(--calc)"></span>berechent</p>
+  <div class="printonly ptitle"><img class="sblogo" src="sauerbeen-schriftzug.png" alt="SauerBeen"><span id="ptitle"></span></div>
+
+  <div class="meta">
+    <label>Pdf-Num</label>
+    <div class="calc span5" id="pdfName"></div>
+
+    <label for="name">Num</label>
+    <input id="name" data-k="name">
+    <label for="wattThr">Watt Schwell</label>
+    <div class="unit"><input id="wattThr" data-k="wattThr" class="num" inputmode="numeric" placeholder="250"><span>W</span></div>
+    <label for="hrThr">HR Schwell</label>
+    <div><input id="hrThr" data-k="hrThr" class="num" inputmode="numeric" placeholder="156"></div>
+
+    <label for="date">Datum</label>
+    <input id="date" data-k="date" type="date">
+    <span></span><span></span>
+    <label for="clock">Auerzäit</label>
+    <input id="clock" data-k="clock" type="time">
+
+    <label for="training">Training</label>
+    <input id="training" data-k="training" class="span5" placeholder="z.B. 4x8min (4min)">
+    <label for="surface">Indoor/Outdoor</label>
+    <input id="surface" data-k="surface" class="span5" list="ioList" placeholder="Outdoor, Indoor (Rolle) …" autocomplete="off">
+    <label for="bike">Velo</label>
+    <input id="bike" data-k="bike" class="span3" list="bikeList" placeholder="Road, TT, Gravel, MTB …" autocomplete="off">
+    <span style="grid-column: span 2"></span>
+    <label for="nutrition">Nutritioun</label>
+    <input id="nutrition" data-k="nutrition" class="span3">
+    <span style="grid-column: span 2"></span>
+    <label for="partner">Trainingspartner</label>
+    <input id="partner" data-k="partner" class="span3">
+    <span style="grid-column: span 2"></span>
+
+    <label for="place">Plaz</label>
+    <input id="place" data-k="place" class="span3" placeholder="Diekirch" title="Fir d'Wieder; bei engem FIT-Import gëtt d'GPS-Startplaz geholl">
+    <span style="grid-column: span 2"></span>
+    <label for="temp">Temperatur</label>
+    <div class="unit"><input id="temp" data-k="temp" class="num" inputmode="decimal"><span>°C</span></div>
+    <span></span><span></span>
+    <label for="wind">Loft</label>
+    <div class="unit"><input id="wind" data-k="wind" class="num" inputmode="decimal"><span>km/h</span></div>
+    <span class="noprint"></span>
+    <div class="span5 wxnote noprint" id="wxNote"></div>
+  </div>
+
+  <div class="tablewrap">
+  <table>
+    <colgroup>
+      <col style="width:8%"><col style="width:9%"><col style="width:14%"><col style="width:10%">
+      <col style="width:10%"><col style="width:10%"><col style="width:8%"><col><col style="width:28px">
+    </colgroup>
+    <tbody class="ref">
+      <tr>
+        <td class="sec" colspan="2">Velo</td><td style="border-top:0;border-left:2px solid var(--line)"></td>
+        <th>Watt</th><th>Max HR Rep.</th><th>Min HR Paus</th><th>Laktat</th>
+        <td style="border:0" colspan="2"></td>
+      </tr>
+      <tr>
+        <td style="border:0" colspan="2"></td><td class="right">MIN</td>
+        <td class="cs" id="refWattMin"><input class="num ref" data-k="rWattMin" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel vum Excel"></td><td class="cs" id="refHrMin"><input class="num ref" data-k="rHrMin" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel vum Excel"></td>
+        <td class="cs" id="refPauseMin"><input class="num ref" data-k="rPhrMin" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel vum Excel"></td>
+        <td class="cs" id="cLacMin"><input class="num" data-k="lacMin" inputmode="decimal"></td>
+        <td style="border:0" colspan="2"></td>
+      </tr>
+      <tr>
+        <td style="border:0" colspan="2"></td><td class="right">MAX</td>
+        <td class="cs" id="refWattMax"><input class="num ref" data-k="rWattMax" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel vum Excel"></td><td class="cs" id="refHrMax"><input class="num ref" data-k="rHrMax" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel vum Excel"></td>
+        <td class="cs" id="refPauseMax"><input class="num ref" data-k="rPhrMax" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel vum Excel"></td>
+        <td class="cs" id="cLacMax"><input class="num" data-k="lacMax" inputmode="decimal"></td>
+        <td style="border:0" colspan="2"></td>
+      </tr>
+    </tbody>
+    <tbody>
+      <tr class="colhead">
+        <th>Rep.</th><th>Dist. (km)</th><th>Zäit (z.B. 9:58,2)</th><th>Watt</th>
+        <th>Max HR Rep.</th><th>Min HR Paus</th><th>Laktat</th><th style="text-align:left">Kommentar, Rep-specific</th><th class="del" style="border:0"></th>
+      </tr>
+    </tbody>
+    <tbody id="rows"></tbody>
+    <tbody>
+      <tr class="tot">
+        <td></td><td class="calc" id="totDist"></td><td class="calc" id="totTime"></td>
+        <td colspan="6"></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="rowbtns">
+    <button id="addRep">+ Rep</button>
+    <button id="remRep">− Rep</button>
+    <button id="fromTraining" title="Liest z.B. „4x8min (4min)“ oder „3x(10min-5min) (5min)“ aus dem Feld Training">Reps aus „Training“ uleeën</button>
+    <label class="tgl" title="Nëmmen d'Weisen (Tabell, PDF, Excel): gerechent gëtt ëmmer mat de genaue Zäiten"><input type="checkbox" id="tenths"> Zäite just op Zéngtel (7:38,2 amplaz 7:38,15)</label>
+  </div>
+  <datalist id="ioList"><option value="Outdoor"><option value="Indoor (Rolle)"><option value="Indoor (Zwift)"></datalist>
+  <datalist id="bikeList"></datalist>
+  <datalist id="distList">
+    <option value="5"><option value="10"><option value="20"><option value="30"><option value="40"><option value="50"><option value="100">
+  </datalist>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="comment">
+    <b>Kommentar:</b>
+    <div>
+      <textarea data-k="comment" id="comment"></textarea>
+      <div class="commentprint" id="commentPrint"></div>
+    </div>
+  </div>
+
+  <p class="tip">Zäiten: „9:58,2“ (min:sek), „1:02:30“ (h:min:sek) oder „45“ (sek). Distanz a km: „20“, „20,5“, „20km“ oder „800m“. Watt: Duerchschnëttswatt vun der Rep.
+    D'Faarwen funktionéieren wéi am Excel: 3-Faarwen-Skala (Min · Median · Max) iwwer d'Kolonn inkl. MIN/MAX-Referenz.
+    Bei „Indoor“ gëtt keen Wieder gesicht.
+    Alles gëtt automatesch am Browser zwëschegespäichert. „PDF fir den Trainer“ → am Drockdialog „Als PDF späicheren“ wielen; den Numm gëtt automatesch virgeschloen.</p>
+</div>
+
+<div id="dropAll">Foto oder Fichier hei lassgoen</div>
+
+<dialog id="imp" aria-labelledby="impTitle">
+  <h2 id="impTitle">Training importéieren</h2>
+  <p class="hint">Zwee Deeler: <b>1</b> wat geplangt war, <b>2</b> wat gefuer gouf. Mat béidem fënnt d'Tool d'Reps am sécherschten. D'Biller ginn hei um Apparat gelies, näischt gëtt eropgelueden. Ëmmer kontrolléieren, ier een iwwerhëlt.</p>
+  <div class="zones">
+    <label class="zone" id="zPlan" for="impFilePlan">
+      <b>1 · Plang</b>
+      <span>Screenshot, Foto oder PDF vum Training</span>
+      <span class="got" id="gotPlan"></span>
+      <input type="file" id="impFilePlan" accept="image/*,.pdf,application/pdf">
+    </label>
+    <label class="zone" id="zLaps" for="impFileLaps">
+      <b>2 · Resultat vun der Auer</b>
+      <span>FIT-Datei (Garmin, Wahoo, Coros …), soss Screenshot vun de Ronnen</span>
+      <span class="got" id="gotLaps"></span>
+      <input type="file" id="impFileLaps">
+    </label>
+  </div>
+  <div id="stravaBox" hidden>
+    <button id="stravaBtn">Vu Strava lueden</button>
+    <button id="stravaOff" hidden>Strava trennen</button>
+    <div id="stravaList"></div>
+  </div>
+  <div id="impStatus" role="status"></div>
+  <div id="impDays"></div>
+  <div class="row">
+    <label for="impPlan" title="Wat geplangt war. D'Reps ginn an de Runde vun der Auer gesicht, d'Runden dertëscht sinn d'Pausen."><b>Plang als Text</b></label>
+    <input id="impPlan" style="flex:1; min-width:200px" placeholder="z.B. 4x8min (4min) – kënnt aus dem Plang oder selwer aginn">
+  </div>
+  <details>
+    <summary>Schreifweis fir Trainingspläng</summary>
+    <div class="hint" style="margin:6px 0 0">
+      <code>15min WU</code> Arullen/Ausrullen (WU, CD, locker …) zielt net als Rep ·
+      <code>4x8min (4min)</code> Reps mat Paus dertëscht ·
+      <code>3x(10min-5min) (5min)</code> Serie ·
+      <code>20min @ 280W</code> Zil-Watt als Kommentar ·
+      <code>p5min</code> oder <code>5min</code> eleng op enger Zeil = Paus nom Block ·
+      <code>2x20km (10min)</code> Reps no Distanz.
+      <br>Beispill: <code>15min WU · 4x8min @ 280W (4min) · p10min · 3x3min (3min) · 10min CD</code>
+    </div>
+  </details>
+  <details id="impTextBox">
+    <summary>Erkannten Text weisen / verbesseren (oder Text hei apechen)</summary>
+    <textarea id="impText" spellcheck="false" placeholder="z.B. 15min WU&#10;4x8min (4min)&#10;10min CD"></textarea>
+    <div class="row" id="impModeRow">
+      <b>Den Text ass:</b>
+      <label><input type="radio" name="impMode" value="plan"> de Plang</label>
+      <label><input type="radio" name="impMode" value="laps" checked> d'Ronnen vun der Auer</label>
+      <button id="impReparse">Nei auswäerten</button>
+    </div>
+  </details>
+  <div id="impPrevWrap" hidden>
+    <table id="impPrev">
+      <thead><tr><th style="width:90px">Typ</th><th>Dist. (m)</th><th>Zäit</th><th>Watt</th><th title="Rep: héchst HR, Paus: déifst HR">HR (Rep max · Paus min)</th><th style="text-align:left">Kommentar</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="actions">
+    <button id="impCancel">Ofbriechen</button>
+    <button id="impApply" class="primary" disabled>Iwwerhuelen</button>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const STORE = 'velo-feedback-v1';
+  const PAGE_TITLE = document.title;
+  const RED = [0xF8,0x69,0x6B], YEL = [0xFF,0xEB,0x84], GRN = [0x63,0xBE,0x7B];
+
+  const blankRep = () => ({ dist:'', time:'', w:'', hr:'', lac:'', note:'',
+                            pTime:'', pHr:'', pLac:'', pNote:'' });
+  const defaults = () => ({
+    name:'', wattThr:'', hrThr:'', date:new Date().toISOString().slice(0,10), clock:'',
+    training:'', surface:'', bike:'', nutrition:'', partner:'', temp:'', wind:'',
+    lacMin:'1,5', lacMax:'5,0', rWattMin:'', rWattMax:'', rHrMin:'', rHrMax:'', rPhrMin:'', rPhrMax:'', tenths:false, comment:'', place:'Diekirch', wxLat:'', wxLon:'', wxAuto:null,
+    reps: Array.from({length:6}, blankRep)
+  });
+
+  let S;
+  try { S = JSON.parse(localStorage.getItem(STORE)) || defaults(); } catch { S = defaults(); }
+  S = Object.assign(defaults(), S);
+
+  // ---------- parsing / formatting ----------
+  const num = s => {
+    if (s === null || s === undefined) return NaN;
+    s = String(s).trim().replace(',', '.');
+    return s === '' ? NaN : Number(s);
+  };
+  // time → seconds. "7:38,2" = m:ss ; "1:02:30" = h:mm:ss ; "45" = s
+  const secs = s => {
+    s = String(s ?? '').trim().replace(/,/g, '.');
+    if (!s) return NaN;
+    const p = s.split(':');
+    if (p.length > 3 || p.some(x => x === '' || isNaN(x))) return NaN;
+    return p.reduce((a, x) => a * 60 + Number(x), 0);
+  };
+  // distance → metres
+  const NAMED = { hm: 21097.5, hallefmarathon: 21097.5, halbmarathon: 21097.5, halfmarathon: 21097.5,
+                  semimarathon: 21097.5, marathon: 42195, meil: 1609.344, mile: 1609.344 };
+  const metres = s => {
+    s = String(s ?? '').trim().toLowerCase().replace(',', '.').replace(/\s/g, '');
+    if (!s) return NaN;
+    if (NAMED[s.replace(/^1/, '')]) return NAMED[s.replace(/^1/, '')];
+    const m = s.match(/^(\d*\.?\d+)(km|k|m)?$/);
+    if (!m) return NaN;
+    return Number(m[1]) * (m[2] === 'k' || m[2] === 'km' ? 1000 : 1);
+  };
+  // distance in the sheet → km (as in the Excel: 0.00 "km"): bare number = km, "800m" = 0,8 km
+  const km = s => {
+    const t = String(s ?? '').trim().toLowerCase().replace(/\s/g, '');
+    if (!t) return NaN;
+    const m = metres(t);
+    return /\d(m)$/.test(t) ? m / 1000 : /\d$/.test(t) ? num(t) : m / 1000;
+  };
+  const dec = (v, d=1) => v.toFixed(d).replace('.', ',');
+  // round like Excel's display: strip float noise (15 significant digits) first, then round half up
+  const rnd = (v, f) => Math.round(Number((v * f).toPrecision(15))) / f;
+  // m:ss,0 (Excel "m:ss.0"); pad=true → mm:ss,0 (Excel "mm:ss.0", used for the rep pace column)
+  const fmtMS = (v, pad = false) => {
+    if (!isFinite(v)) return '';
+    const t = rnd(v, 10);
+    if (t >= 3600) return fmtHMS(t, true);
+    const m = Math.floor(t / 60), s = rnd(t - m * 60, 10);
+    return (pad && m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + dec(s);
+  };
+  // [h]:mm:ss  (tenths=true → h:mm:ss,0)
+  const fmtHMS = (v, tenths = false) => {
+    if (!isFinite(v)) return '';
+    const t = tenths ? rnd(v, 10) : rnd(v, 1);
+    const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = rnd(t % 60, 10);
+    if (tenths) return h + ':' + String(m).padStart(2,'0') + ':' + (s < 10 ? '0' : '') + dec(s);
+    return h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  };
+  const fmtKm = v => isFinite(v) ? dec(rnd(v, 100), 2) + ' km' : '';
+
+  // ---------- Excel-style 3-colour scale (min / 50th percentile / max) ----------
+  const percentile = (arr, p) => {
+    const a = [...arr].sort((x, y) => x - y), i = (a.length - 1) * p, lo = Math.floor(i);
+    return a[lo] + (a[Math.min(lo + 1, a.length - 1)] - a[lo]) * (i - lo);
+  };
+  const mix = (a, b, t) => a.map((x, i) => Math.round(x + (b[i] - x) * t));
+  // cells: [{el, v}] ; lowColor / highColor
+  function scale(cells, low, high) {
+    const vals = cells.filter(c => isFinite(c.v)).map(c => c.v);
+    cells.forEach(c => c.el.style.background = '');
+    if (!vals.length) return;
+    const mn = Math.min(...vals), mx = Math.max(...vals), md = percentile(vals, .5);
+    cells.forEach(({el, v}) => {
+      if (!isFinite(v)) return;
+      let rgb;
+      if (mx === mn) rgb = YEL;
+      else if (v <= md) rgb = md === mn ? YEL : mix(low, YEL, (v - mn) / (md - mn));
+      else rgb = mx === md ? YEL : mix(YEL, high, (v - md) / (mx - md));
+      el.style.background = `rgb(${rgb.join(',')})`;
+    });
+  }
+
+  // ---------- rows ----------
+  const rowsEl = document.getElementById('rows');
+  function buildRows() {
+    rowsEl.innerHTML = S.reps.map((r, i) => `
+      <tr class="rep" data-i="${i}">
+        <td>${i + 1}</td>
+        <td class="in"><input data-r="${i}" data-f="dist" class="num" inputmode="decimal" list="distList"></td>
+        <td class="in"><input data-r="${i}" data-f="time" class="num tm" inputmode="decimal"></td>
+        <td class="in cs" data-c="w"><input data-r="${i}" data-f="w" class="num" inputmode="numeric"></td>
+        <td class="in cs" data-c="hr"><input data-r="${i}" data-f="hr" class="num" inputmode="numeric"></td>
+        <td></td>
+        <td class="cs" data-c="lac"><input data-r="${i}" data-f="lac" class="num" inputmode="decimal"></td>
+        <td><input data-r="${i}" data-f="note"></td>
+        <td class="del"><button data-del="${i}" title="Dës Rep läschen">×</button></td>
+      </tr>
+      <tr class="pause" data-i="${i}">
+        <td>Paus</td><td></td>
+        <td class="in"><input data-r="${i}" data-f="pTime" class="num tm" inputmode="decimal"></td>
+        <td></td>
+        <td></td>
+        <td class="in cs" data-c="phr"><input data-r="${i}" data-f="pHr" class="num" inputmode="numeric"></td>
+        <td class="cs" data-c="lac"><input data-r="${i}" data-f="pLac" class="num" inputmode="decimal"></td>
+        <td><input data-r="${i}" data-f="pNote"></td>
+        <td class="del"></td>
+      </tr>`).join('');
+    rowsEl.querySelectorAll('input[data-f]').forEach(el => el.value = S.reps[el.dataset.r][el.dataset.f] ?? '');
+  }
+
+  // ---------- calculation ----------
+  const $ = id => document.getElementById(id);
+  // reference rows MIN / MAX: [state key, cell id, Excel formula, time?]
+  const REFS = [['rWattMin', 'refWattMin', 'IF(E6="",0,E6/1.5)'], ['rWattMax', 'refWattMax', 'IF(E6="",0,E6*1.5)'],
+                ['rHrMin', 'refHrMin', 'IF(G6="",0,G6-15)'], ['rHrMax', 'refHrMax', 'IF(G6="",0,G6+25)'],
+                ['rPhrMin', 'refPauseMin', 'IF(G6="",0,G6-30)'], ['rPhrMax', 'refPauseMax', 'IF(G6="",0,G6+10)']];
+  const REFV = { rWattMin: 'pMin', rWattMax: 'pMax', rHrMin: 'hMin', rHrMax: 'hMax', rPhrMin: 'qMin', rPhrMax: 'qMax' };
+  function refValues() {
+    const wattThr = num(S.wattThr), hrThr = num(S.hrThr);
+    const own = (k, f) => String(S[k] ?? '').trim() === '' ? f : num(S[k]);
+    return { pMin: own('rWattMin', wattThr / 1.5), pMax: own('rWattMax', wattThr * 1.5),
+             hMin: own('rHrMin', hrThr - 15), hMax: own('rHrMax', hrThr + 25),
+             qMin: own('rPhrMin', hrThr - 30), qMax: own('rPhrMax', hrThr + 10) };
+  }
+  function calc() {
+    // PDF name: YYMMDD Num -- Indoor/Outdoor -- Training
+    let ymd = '';
+    if (S.date) { const [y, m, d] = S.date.split('-'); ymd = y.slice(2) + m + d; }
+    // =CONCATENATE(JJMMDD," ",Num," -- ",Indoor/Outdoor," -- ",Training)
+    const pdfName = `${ymd} ${S.name} -- ${S.surface} -- ${S.training}`;
+    $('pdfName').textContent = pdfName;
+    $('ptitle').textContent = 'Trainingsfeedback Velo · ' + pdfName;
+    // the page title is what browsers offer as PDF file name: keep it on the PDF name all the time
+    // (setting it only on beforeprint is too late for Safari and the iPhone share sheet)
+    document.title = String(S.name || '').trim() || String(S.training || '').trim() ? pdfName.trim() : PAGE_TITLE;
+
+    const wattThr = num(S.wattThr), hrThr = num(S.hrThr);
+    $('wattThr').classList.toggle('bad', S.wattThr !== '' && !isFinite(wattThr));
+
+    // MIN / MAX reference rows
+    // the Excel formulas, unless the trainer typed an own value (empty field = formula again)
+    const R = refValues();
+    const { pMin, pMax, hMin, hMax, qMin, qMax } = R;
+    REFS.forEach(([k, id, , isTime]) => {
+      const el = $(id).querySelector('input'), own = String(S[k] ?? '').trim() !== '', v = R[REFV[k]];
+      el.classList.toggle('own', own);
+      el.classList.toggle('bad', own && !isFinite(v));
+      if (el !== document.activeElement) el.value = own ? (isTime ? fmtTime(S[k]) : S[k]) : !isFinite(v) ? '' : isTime ? fmtMS(v) : rnd(v, 1);   // shown like Excel's 0"W"
+    });
+
+    const wattCells = [{el:$('wattThr'), v:wattThr}, {el:$('refWattMin'), v:pMin}, {el:$('refWattMax'), v:pMax}];
+    const hrCells   = [{el:$('hrThr'), v:hrThr}, {el:$('refHrMin'), v:hMin}, {el:$('refHrMax'), v:hMax}];
+    const phrCells  = [{el:$('refPauseMin'), v:qMin}, {el:$('refPauseMax'), v:qMax}];
+    const lacCells  = [{el:$('cLacMin'), v:num(S.lacMin)}, {el:$('cLacMax'), v:num(S.lacMax)}];
+
+    let totD = 0, totT = 0, repT = 0, repD = 0, hrs = [], phrs = [], wSum = 0, wT = 0, ws = [];
+    rowsEl.querySelectorAll('tr').forEach(tr => {
+      const r = S.reps[tr.dataset.i];
+      if (tr.classList.contains('rep')) {
+        const d = km(r.dist), t = secs(r.time), w = num(r.w);
+        tr.querySelector('[data-f=dist]').classList.toggle('bad', r.dist !== '' && !isFinite(d));
+        tr.querySelector('[data-f=time]').classList.toggle('bad', r.time !== '' && !isFinite(t));
+        tr.querySelector('[data-f=w]').classList.toggle('bad', r.w !== '' && !isFinite(w));
+        wattCells.push({el:tr.querySelector('[data-c=w]'), v:w});
+        if (isFinite(w)) { ws.push(w); if (isFinite(t) && t > 0) { wSum += w * t; wT += t; } }
+        hrCells.push({el:tr.querySelector('[data-c=hr]'), v:num(r.hr)});
+        lacCells.push({el:tr.querySelector('[data-c=lac]'), v:num(r.lac)});
+        if (isFinite(d)) totD += d;
+        if (isFinite(t)) totT += t;
+        if (isFinite(d) && isFinite(t)) { repD += d; repT += t; }
+        if (isFinite(num(r.hr))) hrs.push(num(r.hr));
+        tr.classList.toggle('empty', !(r.dist || r.time || r.w || r.hr || r.lac || r.note));
+      } else {
+        const t = secs(r.pTime);
+        tr.querySelector('[data-f=pTime]').classList.toggle('bad', r.pTime !== '' && !isFinite(t));
+        phrCells.push({el:tr.querySelector('[data-c=phr]'), v:num(r.pHr)});
+        lacCells.push({el:tr.querySelector('[data-c=lac]'), v:num(r.pLac)});
+        if (isFinite(t)) totT += t;
+        if (isFinite(num(r.pHr))) phrs.push(num(r.pHr));
+        tr.classList.toggle('empty', !(r.pTime || r.pHr || r.pLac || r.pNote));
+      }
+    });
+
+    // Excel colour directions: watt low→red, high→green; HR/lactate low→green, high→red
+    scale(wattCells, RED, GRN);
+    scale(hrCells, GRN, RED);
+    scale(phrCells, GRN, RED);
+    scale(lacCells, GRN, RED);
+
+    $('totDist').textContent = totD ? fmtKm(totD) : '';
+    $('totTime').textContent = totT ? fmtHMS(totT) : '';
+
+    const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+    const parts = [];
+    // average watt over the reps, weighted with the rep times (plain average when times are missing)
+    if (ws.length) parts.push(`Ø Watt Reps: <b>${Math.round(wT ? wSum / wT : avg(ws))} W</b>`);
+    if (repD && repT) parts.push(`Ø Vitess Reps: <b>${dec(repD / repT * 3600, 1)} km/h</b>`);
+    if (hrs.length) parts.push(`Ø Max HR Rep.: <b>${Math.round(avg(hrs))}</b>`);
+    if (phrs.length) parts.push(`Ø Min HR Paus: <b>${Math.round(avg(phrs))}</b>`);
+    if (repT) parts.push(`Belaaschtungszäit: <b>${fmtHMS(repT)}</b>`);
+    $('summary').innerHTML = parts.join('');
+    $('commentPrint').textContent = S.comment;
+    if (!wxBusy) $('wxNote').textContent = wxIsAuto() ? `Temperatur a Wand vun Open-Meteo (${S.wxAuto.src}). Selwer iwwerschreiwen geet ëmmer.` : '';
+
+    try { localStorage.setItem(STORE, JSON.stringify(S)); } catch {}
+  }
+
+  // ---------- binding ----------
+  function fillMeta() {
+    document.querySelectorAll('[data-k]').forEach(el => {
+      el.value = S[el.dataset.k] ?? '';
+    });
+    $('tenths').checked = !!S.tenths;
+  }
+  $('tenths').onchange = e => { S.tenths = e.target.checked; calc(); showTimes(); };
+  // time fields are shown formatted (m:ss,0, or m:ss,00 when hundredths were typed) when not being
+  // edited; the typed value is kept unrounded and used for all calculations
+  const rawOf = el => el.dataset.k ? S[el.dataset.k] : S.reps[el.dataset.r][el.dataset.f];
+  const fmtTime = raw => {
+    const v = secs(raw);
+    if (!isFinite(v)) return raw;
+    if (S.tenths) return fmtMS(v);                     // switch „Zäite just op Zéngtel“: display only, calculations stay exact
+    const frac = (String(raw).match(/[.,](\d+)$/) || ['', ''])[1];
+    if (frac.length < 2 || v >= 3600) return fmtMS(v);
+    const t = rnd(v, 100), m = Math.floor(t / 60), s = rnd(t - m * 60, 100);
+    return m + ':' + (s < 10 ? '0' : '') + dec(s, 2);
+  };
+  const showTimes = () => document.querySelectorAll('input.tm').forEach(el => {
+    if (el !== document.activeElement) el.value = fmtTime(rawOf(el) ?? '');
+  });
+  document.addEventListener('focusin', e => { if (e.target.classList?.contains('tm')) e.target.value = rawOf(e.target) ?? ''; });
+  document.addEventListener('focusout', () => setTimeout(showTimes));
+
+  document.addEventListener('input', e => {
+    const el = e.target;
+    if (el.dataset.k) S[el.dataset.k] = el.value;
+    else if (el.dataset.f) S.reps[el.dataset.r][el.dataset.f] = el.value;
+    else return;
+    calc();
+    if (el.dataset.k === 'place') { S.wxLat = S.wxLon = ''; }          // a typed place replaces the GPS start
+    if (['date', 'clock', 'place', 'surface'].includes(el.dataset.k)) { clearTimeout(wxTimer); wxTimer = setTimeout(maybeWeather, el.dataset.k === 'place' ? 1200 : 700); }
+  });
+  rowsEl.addEventListener('click', e => {
+    const i = e.target.dataset.del;
+    if (i === undefined) return;
+    S.reps.splice(Number(i), 1);
+    if (!S.reps.length) S.reps.push(blankRep());
+    buildRows(); calc(); showTimes();
+  });
+  // Enter → next input (quick entry on a phone/keyboard)
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+    if (e.target.id === 'impPlan') { e.preventDefault(); combine(); return; }
+    if (!e.target.closest('.sheet')) return;
+    e.preventDefault();
+    const all = [...document.querySelectorAll('.sheet input:not([type=file])')];
+    const n = all[all.indexOf(e.target) + 1];
+    if (n) n.focus();
+  });
+
+  $('addRep').onclick = () => { S.reps.push(blankRep()); buildRows(); calc(); showTimes(); };
+  $('remRep').onclick = () => { if (S.reps.length > 1) { S.reps.pop(); buildRows(); calc(); showTimes(); } };
+  const hasData = () => S.reps.some(r => r.time || r.w || r.hr || r.pTime || r.pHr || r.lac);
+  $('fromTraining').onclick = () => {
+    const res = parsePlan(S.training);
+    if (!res.entries.some(e => e.type === 'rep')) { alert('Am Feld „Training“ keen Muster wéi „4x8min (4min)“ fonnt.'); return; }
+    if (hasData() && !confirm('Et sinn schonn Donnéeën an de Reps. Iwwerschreiwen?')) return;
+    impMeta = null; planDate = ''; applyEntries(res.entries, null);
+  };
+
+  $('btnNew').onclick = () => {
+    if (!confirm('Neien Training ufänken? Num, Schwellen, MIN/MAX-Wäerter, Velo a Laktat-Grenzen bleiwen.')) return;
+    const keep = {name:S.name, wattThr:S.wattThr, hrThr:S.hrThr, bike:S.bike, lacMin:S.lacMin, lacMax:S.lacMax, place:S.place,
+                  rWattMin:S.rWattMin, rWattMax:S.rWattMax, rHrMin:S.rHrMin, rHrMax:S.rHrMax, rPhrMin:S.rPhrMin, rPhrMax:S.rPhrMax, tenths:S.tenths};
+    S = Object.assign(defaults(), keep);
+    fillMeta(); buildRows(); calc(); showTimes();
+  };
+  $('btnSave').onclick = () => {
+    const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = ($('pdfName').textContent || 'training') + '.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  $('btnLoad').onclick = () => $('fileIn').click();
+  $('fileIn').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { S = Object.assign(defaults(), JSON.parse(await f.text())); fillMeta(); buildRows(); calc(); showTimes(); }
+    catch { alert('Fichier konnt net gelies ginn.'); }
+    e.target.value = '';
+  };
+  // suggested PDF file name = page title = "261014 Guy -- Outdoor -- 4x8min" (like the Excel), set in calc().
+  // Inside the SauerBeen app (WebView) window.print() does nothing: the app prints natively with the print CSS.
+  // anonymous click counter (only a number per button, nothing about the runner or the training); live site only
+  const countUse = k => { if (location.hostname === 'pugu-prog.github.io') fetch('https://abacus.jasoncameron.dev/hit/velo-sauerbeen/' + k, { keepalive: true }).catch(() => {}); };
+  $('btnPdf').onclick = () => {
+    countUse('pdf');
+    if (window.webkit?.messageHandlers?.sauerbeenPrint) window.webkit.messageHandlers.sauerbeenPrint.postMessage(document.title);
+    else if (window.SauerBeenApp?.print) window.SauerBeenApp.print(document.title);
+    else window.print();
+  };
+
+  // ================= Excel export: the template „Velo SauerBeen Trainingsfeedback Template.xlsx“, filled in =================
+  // The template's XML parts come from velo-vorlag.js; cells, formulas, styles and colour scales stay as in the Excel.
+  // 12 reps as in the template; more reps get more rows (totals, comment and colour ranges move down).
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = u => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC[(c ^ u[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  function zipStore(files, type) {                    // [[name, text]] → ZIP without compression
+    const enc = new TextEncoder(), out = [], central = []; let off = 0;
+    const d = new Date(), time = d.getHours() << 11 | d.getMinutes() << 5 | d.getSeconds() >> 1;
+    const date = (d.getFullYear() - 1980) << 9 | (d.getMonth() + 1) << 5 | d.getDate();
+    for (const [name, text] of files) {
+      const nm = enc.encode(name), data = enc.encode(text), crc = crc32(data);
+      const h = new DataView(new ArrayBuffer(30)), c = new DataView(new ArrayBuffer(46));
+      [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x0800, 2], [10, time, 2], [12, date, 2], [14, crc, 4], [18, data.length, 4], [22, data.length, 4], [26, nm.length, 2]]
+        .forEach(([o, v, n]) => n === 4 ? h.setUint32(o, v, true) : h.setUint16(o, v, true));
+      [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x0800, 2], [12, time, 2], [14, date, 2], [16, crc, 4], [20, data.length, 4], [24, data.length, 4], [28, nm.length, 2], [42, off, 4]]
+        .forEach(([o, v, n]) => n === 4 ? c.setUint32(o, v, true) : c.setUint16(o, v, true));
+      out.push(h, nm, data); central.push(c, nm);
+      off += 30 + nm.length + data.length;
+    }
+    const size = central.reduce((a, x) => a + x.byteLength, 0), e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+    e.setUint32(12, size, true); e.setUint32(16, off, true);
+    return new Blob([...out, ...central, e], { type });
+  }
+  const xe = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  // switch off (default): times in the Excel as m:ss,00 like the watch; on: the template's m:ss,0.
+  // New cell styles = copies of the template's time styles with number format 171 "m:ss.00".
+  function hundredthStyles(styles, ids) {
+    const block = styles.match(/<cellXfs count="(\d+)">([\s\S]*?)<\/cellXfs>/);
+    const list = block[2].match(/<xf [^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g), add = [], map = {};
+    ids.forEach(id => {
+      if (id == null || map[id] != null) return;
+      map[id] = String(list.length + add.length);
+      let xf = list[+id].replace(/numFmtId="\d+"/, 'numFmtId="171"');
+      if (!/applyNumberFormat/.test(xf)) xf = xf.replace('<xf ', '<xf applyNumberFormat="1" ');
+      add.push(xf);
+    });
+    const out = styles.replace(block[0], `<cellXfs count="${list.length + add.length}">${block[2]}${add.join('')}</cellXfs>`)
+      .replace(/<numFmts count="(\d+)">/, (a, n) => `<numFmts count="${+n + 1}"><numFmt numFmtId="171" formatCode="m:ss.00"/>`);
+    return { styles: out, map };
+  }
+  function buildSheet(tpl, timeStyle = s => s) {
+    const DAY_S = 86400, top = tpl.slice(0, tpl.indexOf('<sheetData>') + 11), end = tpl.slice(tpl.indexOf('</sheetData>'));
+    const rows = new Map();
+    for (const m of tpl.matchAll(/<row r="(\d+)"([^>]*?)(?:\/>|>(.*?)<\/row>)/gs)) {
+      const cells = new Map();
+      for (const c of (m[3] || '').matchAll(/<c r="([A-Z]+)\d+"([^>]*?)(?:\/>|>.*?<\/c>)/gs)) cells.set(c[1], { raw: c[0], s: (c[2].match(/ s="(\d+)"/) || [])[1] });
+      rows.set(+m[1], { attrs: m[2], cells });
+    }
+    // one cell: number, text, {f: formula, v: cached value} or empty
+    const cell = (ref, s, v) => {
+      const st = s != null ? ` s="${s}"` : '';
+      if (v == null || v === '' || (typeof v === 'number' && !isFinite(v))) return `<c r="${ref}"${st}/>`;
+      if (typeof v === 'number') return `<c r="${ref}"${st}><v>${v}</v></c>`;
+      if (typeof v === 'string') return `<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${xe(v)}</t></is></c>`;
+      const t = typeof v.v === 'string' ? (v.err ? ' t="e"' : ' t="str"') : '';
+      return `<c r="${ref}"${st}${t}><f>${xe(v.f)}</f>${v.v == null || (typeof v.v === 'number' && !isFinite(v.v)) ? '' : `<v>${xe(v.v)}</v>`}</c>`;
+    };
+    const set = (r, col, v) => { const row = rows.get(r), c = row.cells.get(col) || {}; row.cells.set(col, { raw: cell(col + r, c.s, v), s: c.s }); };
+    const n = x => { const v = num(x); return isFinite(v) ? v : null; };
+    const t = x => { const v = secs(x); return isFinite(v) ? v / DAY_S : null; };
+    const str = x => String(x ?? '').trim() || null;
+
+    // head
+    let ymd = '';
+    if (S.date) { const [y, m, d] = S.date.split('-'); ymd = y.slice(2) + m + d; }
+    set(4, 'C', { f: 'CONCATENATE(RIGHT(YEAR(C8),2),IF(MONTH(C8)<10,CONCATENATE("0",MONTH(C8)),MONTH(C8)),IF(DAY(C8)<10,CONCATENATE("0",DAY(C8)),DAY(C8))," ",C6," -- ",C10," -- ",C9)',
+                  v: `${ymd} ${S.name} -- ${S.surface} -- ${S.training}` });
+    set(6, 'C', str(S.name)); set(6, 'E', n(S.wattThr)); set(6, 'G', n(S.hrThr));
+    if (S.date) { const [y, m, d] = S.date.split('-').map(Number); set(8, 'C', (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 864e5); }
+    if (S.clock) { const [h, mi] = S.clock.split(':').map(Number); set(8, 'G', (h * 60 + mi) / 1440); }
+    set(9, 'C', str(S.training)); set(10, 'C', str(S.surface)); set(11, 'C', str(S.bike)); set(12, 'C', str(S.nutrition));
+    set(13, 'C', str(S.partner)); set(14, 'C', n(S.temp)); set(14, 'G', n(S.wind));
+    // MIN / MAX: the Excel formula, or the trainer's own value
+    const R = refValues(), cols = { rWattMin: [17, 'D'], rWattMax: [18, 'D'], rHrMin: [17, 'E'], rHrMax: [18, 'E'], rPhrMin: [17, 'F'], rPhrMax: [18, 'F'] };
+    REFS.forEach(([k, , f, isTime]) => {
+      const [r, col] = cols[k], v = R[REFV[k]], val = isTime ? v / DAY_S : v;
+      set(r, col, String(S[k] ?? '').trim() !== '' ? (isFinite(val) ? val : null) : { f, v: isFinite(val) ? val : 0 });
+    });
+    set(17, 'G', n(S.lacMin)); set(18, 'G', n(S.lacMax));
+
+    // reps: rows 21 … (first rep row, pause rows, last pause row keep their own borders)
+    const N = Math.max(12, S.reps.length), delta = 2 * (N - 12);
+    const style = r => new Map([...rows.get(r).cells].map(([c, x]) => [c, x.s]));
+    const sFirst = style(21), sPause = style(22), sRep = style(23), sLastPause = style(44);
+    const aRep = rows.get(23).attrs, aPause = rows.get(24).attrs, aLast = rows.get(44).attrs;
+    const moved = new Map();
+    for (const [r, row] of rows) {
+      if (r < 21) moved.set(r, row);
+      else if (r >= 45) {                              // totals, comment: move down, formulas follow
+        const sh = x => x.replace(/([A-Z]+)(\d+)/g, (a, c, k) => +k >= 45 ? c + (+k + delta) : a);
+        const cells = new Map([...row.cells].map(([c, x]) => [c, { raw: x.raw.replace(/r="([A-Z]+)(\d+)"/, (a, cc, k) => `r="${cc}${+k + delta}"`).replace(/<f>(.*?)<\/f>/, (a, f) => `<f>${sh(f)}</f>`), s: x.s }]));
+        moved.set(r + delta, { attrs: row.attrs, cells });
+      }
+    }
+    let totD = 0, totT = 0;
+    for (let i = 0; i < N; i++) {
+      const rep = S.reps[i] || blankRep(), r = 21 + 2 * i, st = i ? sRep : sFirst, last = i === N - 1, ps = last ? sLastPause : sPause;
+      const d = km(rep.dist), tm = secs(rep.time), pt = secs(rep.pTime);
+      if (isFinite(d)) totD += d;
+      if (isFinite(tm)) totT += tm;
+      if (isFinite(pt)) totT += pt;
+      const repCells = { A: i + 1, B: isFinite(d) ? d : null, C: isFinite(tm) ? tm / DAY_S : null,
+        D: n(rep.w), E: n(rep.hr), F: null, G: n(rep.lac), H: str(rep.note), J: null };
+      const pauseCells = { A: 'Paus', B: null, C: isFinite(pt) ? pt / DAY_S : null, D: null, E: null, F: n(rep.pHr), G: n(rep.pLac), H: str(rep.pNote), J: null };
+      const mk = (cs, sm, rr) => new Map(Object.entries(cs).map(([c, v]) => {
+        const st = c === 'C' ? timeStyle(sm.get(c)) : sm.get(c);       // column C = rep and pause times
+        return [c, { raw: cell(c + rr, st, v), s: st }];
+      }));
+      moved.set(r, { attrs: aRep, cells: mk(repCells, st, r) });
+      moved.set(r + 1, { attrs: last ? aLast : aPause, cells: mk(pauseCells, ps, r + 1) });
+    }
+    // empty separator row 20 stays; totals and comment
+    const tr = 46 + delta, cr = 47 + delta;
+    const setM = (r, col, v) => { const row = moved.get(r), c = row.cells.get(col) || {}; row.cells.set(col, { raw: cell(col + r, c.s, v), s: c.s }); };
+    setM(tr, 'B', { f: `SUM(B20:B${45 + delta})`, v: totD }); setM(tr, 'C', { f: `SUM(C20:C${45 + delta})`, v: totT / DAY_S });
+    setM(cr, 'C', str(S.comment));
+
+    const colN = c => [...c].reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0);
+    const body = [...moved].sort((a, b) => a[0] - b[0]).map(([r, row]) =>
+      `<row r="${r}"${row.attrs}>${[...row.cells.values()].sort((a, b) => colN(a.raw.match(/r="([A-Z]+)/)[1]) - colN(b.raw.match(/r="([A-Z]+)/)[1])).map(x => x.raw).join('')}</row>`).join('');
+    const shiftRef = q => q.replace(/([A-Z]+)(\d+)/g, (a, c, k) => +k >= 45 && +k < 1048576 ? c + (+k + delta) : a);
+    return top.replace(/<dimension ref="([^"]*)"/, (a, q) => `<dimension ref="${shiftRef(q)}"`) + body +
+           end.replace(/sqref="([^"]*)"/g, (a, q) => `sqref="${shiftRef(q)}"`);
+  }
+  $('btnXlsx').onclick = async () => {
+    try {
+      await loadScript('velo-vorlag.js');
+      const parts = Object.assign({}, window.VELO_XLSX);
+      let timeStyle;
+      if (!S.tenths) {
+        const tpl = parts['xl/worksheets/sheet1.xml'];
+        const ids = [21, 22, 23, 24, 44].map(r => (tpl.match(new RegExp(`<c r="C${r}" s="(\\d+)"`)) || [])[1]);
+        const h = hundredthStyles(parts['xl/styles.xml'], ids);
+        parts['xl/styles.xml'] = h.styles; timeStyle = s => h.map[s] ?? s;
+      }
+      parts['xl/worksheets/sheet1.xml'] = buildSheet(parts['xl/worksheets/sheet1.xml'], timeStyle);
+      const blob = zipStore(Object.entries(parts), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = ($('pdfName').textContent.trim() || 'Trainingsfeedback').replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
+      document.body.appendChild(a); a.click(); a.remove();
+      countUse('excel');
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } catch (err) { alert('Excel-Fichier konnt net gemaach ginn: ' + (err.message || err)); }
+  };
+
+
+  // ================= Import from screenshot / photo / plan (image or PDF) =================
+  const TESS = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+  const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const loaded = {};
+  const loadScript = src => loaded[src] ??= new Promise((res, rej) => {
+    const el = document.createElement('script');
+    el.src = src; el.onload = res;
+    el.onerror = () => { delete loaded[src]; rej(new Error('Konnt ' + src + ' net lueden (Internet?)')); };
+    document.head.appendChild(el);
+  });
+
+  const dlg = $('imp');
+  let entries = [], dayBlocks = [];
+  const status = (msg, err = false) => { $('impStatus').textContent = msg; $('impStatus').classList.toggle('err', err); };
+  const fmtNum = v => String(Math.round(v * 1000) / 1000).replace('.', ',');
+
+  // duration token → seconds: "45s", "90 sec", "3min", "3'", "1'30", "1:30", "2:01,2"
+  const parseDur = t => {
+    t = String(t).trim().toLowerCase().replace(/\s+/g, '').replace(/[’`]/g, "'");
+    let m;
+    if ((m = t.match(/^(\d+(?:[.,]\d+)?)(s|sec|sek|''|")$/))) return num(m[1]);
+    if ((m = t.match(/^(\d+(?:[.,]\d+)?)(min|mn|')$/))) return num(m[1]) * 60;
+    if ((m = t.match(/^(\d+)'(\d{1,2})(?:''|")?$/))) return +m[1] * 60 + +m[2];
+    if ((m = t.match(/^(\d+)h(\d{1,2})?$/))) return +m[1] * 3600 + (+m[2] || 0) * 60;
+    if (/^\d+:\d{2}(:\d{2})?([.,]\d+)?$/.test(t)) return secs(t);
+    return NaN;
+  };
+  // distance token in a plan → metres ("600m", "3km", "5k", "1600" (bare ≥ 100 = m), "3" (bare < 50 = km), "HM")
+  const parseDistTok = t => {
+    t = String(t).trim().toLowerCase().replace(/\s+/g, '');
+    const n = metres(t);
+    if (isFinite(n) && /[a-z]/.test(t)) return n;
+    if (/^\d+(?:[.,]\d+)?$/.test(t)) { const v = num(t); return v >= 100 ? v : v < 50 ? v * 1000 : NaN; }
+    return NaN;
+  };
+  const DOWN = /\b(e?rof|rof|trab\w*|jog\w*|down|back|retour)\b/i;     // "(rof)", "(trab rof)", "(jog down)"
+  const HILL = /\b(rop|e?rop|hills?|uphill|bierg\w*|c[oô]tes?|steigung)\b/i;
+  const bracketPause = txt => {
+    let d = NaN, down = false;
+    const rest = txt.replace(/\(([^)]*)\)/g, (a, b) => {
+      const tok = b.toLowerCase().split(/\s+/).map(parseDur).find(isFinite);
+      const isDown = DOWN.test(b);
+      if (isDown) down = true;
+      if (tok != null && isFinite(tok)) { d = tok; return ' '; }
+      return isDown ? ' ' : a;
+    });
+    return { pause: d, down, rest };
+  };
+  const tokItem = t => {
+    const d = parseDur(t); if (isFinite(d)) return { time: d };
+    const m = parseDistTok(t); if (isFinite(m)) return { dist: m };
+    return null;
+  };
+  const E = (type, o = {}) => Object.assign({ type, dist: '', time: '', w: '', hr: '', note: '', hrs: [] }, o);
+
+  // ---------- plan text → entries ----------
+  const DAY = /^(m[eé]i?nd|d[eë]nschd|m[eë]tt?woch|donnesch|freid|sam?sc?h?d|sonnd|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|monday|tuesday|wednesday|thursday|friday|saturday|sunday|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/i;
+  const WARM = /rull|roll|spin|fahr|warm|cool|easy|locker|einl|ausl|recup|r[ée]cup|\b(wu|cd|w\/u|c\/d|ee|ea|z1)\b/i;
+  // pause written with a prefix: "p90s", "P: 2min", "r60s", "rec 90s", "Paus 1'", "rest 2min"
+  const PAUSE_PREFIX = /^(p|r|rec|rest|recovery|paus[e]?|break|trab|jog)\s*[:.]?\s*(?=\d)/i;
+  // OCR confusions in the leading number: "Gmin" → "6min", "Bmin" → "8min", "Ox" → "0x" …
+  const OCR_DIGIT = { G: '6', b: '6', S: '5', s: '5', O: '0', o: '0', l: '1', I: '1', B: '8', Z: '2', z: '2' };
+  const fixLead = l => l.replace(/^([GbSsOolIBZz])(\d*)(?=\s*(?:min|mn|sec|s|km|k|m|x|')\b)/, (a, c, d) => OCR_DIGIT[c] + d);
+  // summary for the "Training" field: no pause brackets, e.g. "5x60s hills + 8min threshold"
+  const clean = raw => bracketPause(fixLead(raw)).rest.replace(/\s+/g, ' ').trim();
+  // weekday name → nearest date with that weekday (−3 … +3 days): Friday's session seen on Thursday = tomorrow,
+  // Sunday's long run filled in on Monday = yesterday
+  const WEEKDAYS = [/^(sonnd|sonntag|sunday|dimanche)/i, /^(m[eé]i?nd|montag|monday|lundi)/i, /^(d[eë]nschd|dienstag|tuesday|mardi)/i,
+    /^(m[eë]tt?woch|mittwoch|wednesday|mercredi)/i, /^(donnesch|donnerstag|thursday|jeudi)/i, /^(freid|freitag|friday|vendredi)/i, /^(sam?sc?h?d|samstag|saturday|samedi)/i];
+  const dateOfDay = name => {
+    const wd = WEEKDAYS.findIndex(re => re.test(String(name).trim()));
+    if (wd < 0) return '';
+    const d = new Date(), back = (d.getDay() - wd + 7) % 7;
+    d.setDate(d.getDate() + (back <= 3 ? -back : 7 - back));
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  };
+  let planDate = '';
+  function splitDays(text) {
+    const blocks = []; let cur = null;
+    text.split(/\n/).forEach(raw => {
+      const l = raw.trim(); if (!l) return;
+      const d = l.match(new RegExp(DAY.source + '\\S*', 'i'));
+      if (d) {                                   // "Mettwochs 4km" → day "Mettwochs", line "4km"
+        const rest = l.slice(d[0].length).trim();
+        cur = { day: d[0], lines: rest ? [rest] : [] }; blocks.push(cur);
+      }
+      else if (cur) cur.lines.push(l);
+    });
+    return blocks.filter(b => b.lines.length);
+  }
+  function parsePlan(text, opts = {}) {
+    const out = [], plain = [], used = [], unread = [];
+    const lines = String(text).split(/\n|;/).map(l => l.replace(/^[\s•\-–*·]+/, '').trim()).filter(Boolean);
+    const lastRep = () => { for (let i = out.length - 1; i >= 0; i--) if (out[i].type === 'rep') return i; return -1; };
+    const addPause = sec => {
+      const i = lastRep(); if (i < 0) return;
+      const next = out[i + 1];
+      if (next && next.type === 'pause') { next.time = fmtMS(sec); next.note = ''; }
+      else out.splice(i + 1, 0, E('pause', { time: fmtMS(sec) }));
+    };
+    for (const raw of lines) {
+      let l = fixLead(raw).toLowerCase().replace(/×/g, 'x');
+      const pp = l.match(PAUSE_PREFIX);
+      if (pp) {                                                 // "p90s" → pause after the last rep
+        const d = parseDur(l.slice(pp[0].length).replace(/\(.*\)/, '').trim());
+        if (isFinite(d)) { addPause(d); continue; }
+      }
+      let m = l.match(/^(\d+)\s*x\s*(.+)$/);
+      if (m) {
+        const n = +m[1]; let rest = m[2].trim(), items;
+        if (rest.startsWith('(')) {
+          const j = rest.indexOf(')'); if (j < 0) continue;
+          items = rest.slice(1, j).split(/\s*[-–\/+,]\s*/); rest = rest.slice(j + 1);
+        } else {
+          const t = rest.match(/^([\d.,]+\s*(?:min|mn|sec|sek|km|k|m|s|''|'|")?(?![a-z])|hm|marathon)/);
+          if (!t) { unread.push(raw); continue; }
+          items = [t[1]]; rest = rest.slice(t[0].length);
+        }
+        const its = items.map(tokItem);
+        if (!its.length || its.some(x => !x) || n < 1 || n > 60) { unread.push(raw); continue; }
+        const bp = bracketPause(rest), pause = bp.pause;
+        let note = bp.rest.replace(/\s+/g, ' ').trim(), tag = '';
+        if (!note && opts.friday && its.every(x => x.time && x.time <= 120)) note = tag = 'hills';
+        // hills: recovery = jog back down (no fixed time); a time in brackets is the pause after the block
+        const down = bp.down || HILL.test(note);
+        for (let k = 0; k < n; k++) its.forEach((it, idx) => {
+          out.push(E('rep', { dist: it.dist ? fmtNum(it.dist) : '', time: it.time ? fmtMS(it.time) : '', note }));
+          const isLast = k === n - 1 && idx === its.length - 1;
+          if (!isLast) out.push(down ? E('pause', { note: 'rof trabéieren' }) : E('pause', { time: isFinite(pause) ? fmtMS(pause) : '' }));
+          // the bracket pause also follows the block ("5x60s hills (90s Paus)" → 8min threshold); dropped at the end if nothing follows
+          else if (isFinite(pause)) out.push(E('pause', { time: fmtMS(pause) }));
+        });
+        used.push(clean(raw) + (tag ? ' ' + tag : ''));
+        continue;
+      }
+      m = l.match(/^([\d.,]+\s*(?:min|mn|sec|sek|km|k|m|s|''|'|")?|hm|marathon)(?=[\s(@]|$)\s*(.*)$/);
+      // lines without any number (titles like "Beschreiwung", "Freides") are not training steps
+      if (!m) { if (/\d/.test(l)) unread.push(raw); continue; }
+      const it = tokItem(m[1]); if (!it) { unread.push(raw); continue; }
+      const bp = bracketPause(m[2]);                              // "8min threshold (90s Paus)"
+      let note = bp.rest.replace(/\s+/g, ' ').trim(), tag = '';
+      // a bare time is a pause after the block ("90s", "3min"); longer ones are a threshold rep ("8min" read without its word)
+      if (it.time && !note && it.time <= 180) { addPause(it.time); continue; }
+      if (it.time && note && WARM.test(note)) continue;          // "15min WU", "10min ausrullen": no rep
+      if (it.time && !note) note = tag = 'threshold';
+      // warm-up / cool-down / easy running is not a rep ("4km", "2km auslaaf", "3km easy")
+      if (it.dist && (!note || WARM.test(note))) { plain.push(it.dist); continue; }
+      out.push(E('rep', { dist: it.dist ? fmtNum(it.dist) : '', time: it.time ? fmtMS(it.time) : '', note }));
+      if (isFinite(bp.pause)) out.push(E('pause', { time: fmtMS(bp.pause) }));
+      used.push(clean(raw) + (tag ? ' ' + tag : ''));
+    }
+    // a pause after the very last rep is not part of the session (cool-down follows)
+    while (out.length && out[out.length - 1].type === 'pause') out.pop();
+    // no structured reps: a lone distance (e.g. "14km" long run) becomes one rep
+    if (!out.some(e => e.type === 'rep') && plain.length) {
+      const d = Math.max(...plain);
+      out.push(E('rep', { dist: fmtNum(d) })); used.push(fmtNum(d / 1000) + 'km');
+    }
+    return { entries: out, summary: used.join(' + '), unread };
+  }
+
+  // ---------- lap list (watch app / display) text → entries ----------
+  const SUMMARY = /^\s*(summary|total|totals|gesamt|zusammenfassung|r[ée]sum[ée]|totaal|insgesamt)\b/i;
+  function parseLaps(text) {
+    const rows = [];
+    text.split(/\n/).forEach(line => {
+      if (SUMMARY.test(line)) return;                       // totals row of the lap table
+      let l = ' ' + line.replace(/[|]/g, ' ').replace(/\s+/g, ' ') + ' ';
+      // OCR often drops the colon: "757.3" → "7:57.3", "2750.6" → "27:50.6"
+      l = l.replace(/(?<![\d:.,])(\d{1,2})([0-5]\d)([.,]\d)(?![\d])/g, '$1:$2$3');
+      const durs = [], paces = [];
+      l = l.replace(/(\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,2})?)(\s*[\/\[(|l1]\s*k?k?m\b|\s*\/\s*mi\b)?/gi, (a, t, p) => {
+        (p ? paces : durs).push(t); return ' ';
+      });
+      if (!durs.length) return;
+      let d = NaN, w = NaN;
+      l = l.replace(/(?<![\d.,:])(\d{2,4})\s*w\b/i, (a, v) => { w = +v; return ' '; });
+      l = l.replace(/(\d+(?:[.,]\d+)?)\s*(km|m)(?![a-z])/i, (a, v, u) => { d = num(v) * (u.toLowerCase() === 'km' ? 1000 : 1); return ' '; });
+      if (!isFinite(d)) l = l.replace(/(?<![\d:])(\d{1,2}[.,]\d{2,3})(?![\d:])/, (a, v) => { d = num(v) * 1000; return ' '; });
+      const hrs = (l.match(/(?<![\d.,:])\d{2,3}(?![\d.,:])/g) || []).map(Number).filter(v => v >= 60 && v <= 230);
+      // lap time = the duration that fits distance × pace (skips "cumulative time" columns)
+      let timeStr = durs[0];
+      const pace = paces.length ? secs(paces[0]) : NaN;
+      if (isFinite(d) && isFinite(pace) && durs.length > 1) {
+        const exp = d / 1000 * pace;
+        timeStr = durs.reduce((a, b) => Math.abs(secs(b) - exp) < Math.abs(secs(a) - exp) ? b : a);
+      }
+      const t = secs(timeStr);
+      if (!isFinite(d) && isFinite(pace) && pace > 0) d = Math.round(t / pace * 1000);
+      rows.push({ d: isFinite(d) ? d : NaN, t, pw: isFinite(w) ? w : undefined, timeStr: timeStr.replace('.', ','), hrs });
+    });
+    const typed = classify(rows);
+    return rows.map((r, i) => E(typed[i], { dist: isFinite(r.d) ? fmtNum(r.d) : '', time: r.timeStr, hrs: r.hrs, w: r.pw && typed[i] !== 'pause' ? String(Math.round(r.pw)) : '', pw: r.pw,
+      hr: r.hrs.length ? String(typed[i] === 'pause' ? Math.min(...r.hrs) : Math.max(...r.hrs)) : '' }));
+  }
+  // rows [{d (m), t (s), pw (W)}] → 'rep' | 'pause' | 'skip'
+  // hardness of a lap: average watt when the laps have power, else the speed
+  function classify(rows) {
+    const withPw = rows.filter(r => r.pw > 0).length >= Math.max(2, rows.filter(r => r.t > 0).length / 2);
+    const x = r => withPw ? (r.pw > 0 ? r.pw : 0) : r.d > 0 && r.t > 0 ? r.d / r.t : 0;
+    // reps = the hard group: sort and cut at the first drop of more than 25 %
+    const xs = rows.filter(r => r.t > 0 && x(r) > 0).map(x).sort((a, b) => b - a);
+    let thr = 0;
+    for (let i = 1; i < xs.length; i++) if (xs[i - 1] / xs[i] > 1.25) { thr = (xs[i] + xs[i - 1]) / 2; break; }
+    const typed = rows.map(r => x(r) > 0 && x(r) >= thr ? 'rep' : 'pause');
+    // a plain ride with auto laps (e.g. every 5 km, the rest at the end): every lap counts, a short stop stays a pause
+    const run = rows.filter(r => r.d > 0), L0 = run[0]?.d;
+    if (!withPw && run.length >= 2 && L0 >= 1000 && run.slice(0, -1).every(r => Math.abs(r.d - L0) < 1) && run[run.length - 1].d < L0)
+      return rows.map(r => r.d > 0 ? 'rep' : 'pause');
+    // warm-up / cool-down: a "rep" at either end that is easier than the typical rep and much longer or shorter
+    const size = r => withPw || !(r.d > 0) ? r.t : r.d;
+    const repIdx = typed.map((t, i) => t === 'rep' ? i : -1).filter(i => i >= 0);
+    if (repIdx.length >= 3) {
+      const med = a => { const b = [...a].sort((p, q) => p - q); return b[(b.length - 1) >> 1]; };
+      const mS = med(repIdx.map(i => size(rows[i])));
+      const mX = med(repIdx.filter(i => Math.abs(size(rows[i]) - mS) / mS <= 0.2).map(i => x(rows[i])));
+      const odd = i => x(rows[i]) < mX && Math.abs(size(rows[i]) - mS) / mS > 0.2;
+      while (repIdx.length > 2 && odd(repIdx[0])) typed[repIdx.shift()] = 'skip';
+      while (repIdx.length > 2 && odd(repIdx[repIdx.length - 1])) typed[repIdx.pop()] = 'skip';
+    }
+    const first = typed.indexOf('rep'), last = typed.lastIndexOf('rep');
+    return typed.map((t, i) => first < 0 ? 'rep' : (i < first || i > last) ? 'skip' : t);
+  }
+
+  // ---------- activity files: FIT (Garmin, Coros, Strava original), TCX, GPX, Garmin ZIP ----------
+  const fmtCs = v => {                       // seconds → m:ss,cc (hundredths, like the watch)
+    const t = rnd(v, 100);
+    if (t >= 3600) return fmtHMS(t, true);
+    const m = Math.floor(t / 60), s = rnd(t - m * 60, 100);
+    return m + ':' + (s < 10 ? '0' : '') + dec(s, 2);
+  };
+  // laps [{d, t, hrAvg, hrMax, hrMin, kind}] (kind from the file: rep/pause/skip or '') → preview entries
+  function lapsToEntries(laps) {
+    const auto = classify(laps), types = laps.map((l, i) => l.kind || auto[i]);
+    // standing before the first / after the last rep is no pause of the session
+    const r0 = types.indexOf('rep'), r1 = types.lastIndexOf('rep');
+    types.forEach((t, i) => { if (t === 'pause' && (i < r0 || i > r1)) types[i] = 'skip'; });
+    return laps.map((l, i) => {
+      const type = types[i];
+      const hrRep = l.hrMax ?? l.hrAvg, hrPause = l.hrMin ?? l.hrAvg;
+      const hr = type === 'pause' ? hrPause : hrRep;
+      return E(type, { dist: isFinite(l.d) ? fmtNum(Math.round(l.d * 10) / 10) : '', time: fmtCs(l.t),
+        hr: hr != null ? String(Math.round(hr)) : '', gps: l.d, stop: !!l.stop, w: l.pw > 0 && type !== 'pause' ? String(Math.round(l.pw)) : '',
+        pw: l.pw,
+        hrs: [hrRep, hrPause].filter(v => v != null).map(Math.round) });
+    });
+  }
+  // HR min/max per lap from the record stream [{ts, hr}]
+  function hrRange(recs, from, to) {
+    let mn = null, mx = null;
+    for (const r of recs) if (r.ts >= from && r.ts <= to && r.hr > 0) { mn = mn == null ? r.hr : Math.min(mn, r.hr); mx = mx == null ? r.hr : Math.max(mx, r.hr); }
+    return { mn, mx };
+  }
+
+  // Minimal FIT decoder: lap (19), record (20), session (18), activity (34), weather_conditions (128)
+  const FIT_EPOCH = 631065600;                         // 1989-12-31T00:00:00Z
+  function parseFIT(buf) {
+    const dv = new DataView(buf), laps = [], recs = [], evs = [], meta = {};
+    let off = 0;
+    while (off + 12 <= buf.byteLength) {
+      const hs = dv.getUint8(off), size = dv.getUint32(off + 4, true);
+      if (String.fromCharCode(...new Uint8Array(buf, off + 8, 4)) !== '.FIT') { if (!laps.length) throw new Error('Keen FIT-Fichier.'); break; }
+      let p = off + hs; const end = p + size, defs = {}; let lastTs = 0;
+      const read = (q, sz, little) => sz === 1 ? dv.getUint8(q) : sz === 2 ? dv.getUint16(q, little) : sz === 4 ? dv.getUint32(q, little) : null;
+      const INVALID = { 1: 0xFF, 2: 0xFFFF, 4: 0xFFFFFFFF };
+      while (p < end) {
+        const h = dv.getUint8(p++);
+        if (!(h & 0x80) && (h & 0x40)) {                     // definition message
+          const local = h & 0x0F, dev = h & 0x20;
+          p++; const little = dv.getUint8(p++) === 0, g = dv.getUint16(p, little); p += 2;
+          const nf = dv.getUint8(p++), fields = [];
+          for (let i = 0; i < nf; i++, p += 3) fields.push({ n: dv.getUint8(p), sz: dv.getUint8(p + 1), bt: dv.getUint8(p + 2) & 0x1F });
+          let devSize = 0;
+          if (dev) { const nd = dv.getUint8(p++); for (let i = 0; i < nd; i++, p += 3) devSize += dv.getUint8(p + 1); }
+          defs[local] = { g, little, fields, devSize };
+          continue;
+        }
+        let local, ts = null;
+        if (h & 0x80) {                                      // compressed timestamp header
+          local = (h >> 5) & 3; const o = h & 0x1F;
+          ts = (lastTs & ~0x1F) + o; if (o < (lastTs & 0x1F)) ts += 0x20; lastTs = ts;
+        } else local = h & 0x0F;
+        const def = defs[local]; if (!def) throw new Error('FIT-Fichier ass beschiedegt.');
+        const v = {};
+        for (const fd of def.fields) {
+          let x = read(p, fd.sz, def.little);
+          const signed = fd.bt === 1 || fd.bt === 3 || fd.bt === 5;      // sint8 / sint16 / sint32
+          if (x != null && signed) {
+            const half = 2 ** (8 * fd.sz - 1);
+            x = x === half - 1 ? null : x >= half ? x - 2 * half : x;    // 0x7F… = invalid
+          } else if (x === INVALID[fd.sz]) x = null;
+          if (x != null) v[fd.n] = x;
+          p += fd.sz;
+        }
+        p += def.devSize;
+        if (v[253] != null) { lastTs = v[253]; ts = v[253]; }
+        if (def.g === 20 && ts != null && (v[3] != null || v[5] != null)) recs.push({ ts, hr: v[3], dist: v[5] != null ? v[5] / 100 : null });
+        if (def.g === 21 && v[0] === 0 && v[1] != null && ts != null) evs.push({ ts, type: v[1] });   // timer start / stop
+        // start position (semicircles → degrees) for the weather lookup: first GPS record, else the session start
+        if ((def.g === 20 && v[0] != null && v[1] != null) || (def.g === 18 && v[3] != null && v[4] != null)) {
+          const [la, lo] = def.g === 20 ? [v[0], v[1]] : [v[3], v[4]];
+          if (meta.lat == null) { meta.lat = la * 180 / 2 ** 31; meta.lon = lo * 180 / 2 ** 31; }
+        }
+        if (def.g === 128 && v[1] != null && meta.temp == null) {          // weather from the phone (0 = current report)
+          if (v[0] == null || v[0] === 0) { meta.temp = v[1]; if (v[4] != null) meta.wind = v[4] / 1000 * 3.6; }
+        }
+        if (def.g === 18) { if (v[2] != null) meta.start ??= v[2]; if (v[57] != null) meta.sensorTemp ??= v[57]; }
+        if (def.g === 34 && v[5] != null && v[253] != null) meta.tzOffset = v[5] - v[253];
+        if (def.g === 19) laps.push({ start: v[2], end: v[253] ?? ts, t: (v[8] ?? v[7]) / 1000, d: v[9] != null ? v[9] / 100 : NaN,
+                                      hrAvg: v[15], hrMax: v[16], hrMin: v[63], intensity: v[23], pw: v[19] });
+      }
+      off = end + 2;                                         // skip CRC, next chained FIT file
+    }
+    if (!laps.length) throw new Error('Am FIT-Fichier si keng Runden.');
+    meta.start ??= laps[0].start;
+    // ---- pauses the laps do not show ----
+    // (1) timer stopped (pause button, ≥ 10 s) and (2) standing still inside a lap (rest without stopping the watch):
+    // both become a pause entry of their own; the running part keeps its timer time (hundredths)
+    const stops = []; let stopAt = null;
+    for (const e of evs) {
+      if ([1, 4, 8, 9].includes(e.type)) { if (stopAt == null) stopAt = e.ts; }
+      else if (e.type === 0 && stopAt != null) { if (e.ts - stopAt >= 10) stops.push({ a: stopAt, b: e.ts }); stopAt = null; }
+    }
+    // on the bike a pause is rolling easy, not standing: no splitting of laps at slow moments (traffic lights …)
+    const R = [];
+    const distAt = ts => { let d = null; for (const r of R) { if (r.ts > ts) break; d = r.dist; } return d; };
+    // first / last moment in [a, b] where the runner covers ≥ 12 m within 8 s (jogging or faster)
+    const moves = (i, j) => R[j].dist - R[i].dist >= 12;
+    function firstMove(a, b) {
+      for (let i = 0, j = 0; i < R.length; i++) {
+        if (R[i].ts < a) continue; if (R[i].ts > b) break;
+        if (j < i) j = i; while (j < R.length && R[j].ts < R[i].ts + 8) j++;
+        if (j < R.length && R[j].ts <= b + 8 && moves(i, j)) return R[i].ts;
+      }
+      return null;
+    }
+    function lastMove(a, b) {
+      for (let j = R.length - 1, i = j; j >= 0; j--) {
+        if (R[j].ts > b) continue; if (R[j].ts < a) break;
+        if (i > j) i = j; while (i >= 0 && R[i].ts > R[j].ts - 8) i--;
+        if (i >= 0 && R[i].ts >= a - 8 && moves(i, j)) return R[j].ts;
+      }
+      return null;
+    }
+    const hrIn = (a, b) => recs.filter(r => r.ts >= a && r.ts <= b && r.hr > 0).map(r => r.hr);
+    const hrBack = ts => (recs.find(r => r.ts >= ts && r.hr > 0) || {}).hr;
+    const useInt = laps.some(l => l.intensity === 1 || l.intensity === 4) && laps.some(l => l.intensity === 0 || l.intensity == null);
+    const out = [];
+    const pause = (t, a, b, back) => {          // HR: lowest recorded while resting, else the HR when running again
+      const h = hrIn(a, b);
+      out.push({ d: NaN, t, hrMin: h.length ? Math.min(...h) : hrBack(back), kind: 'pause', stop: true });
+    };
+    for (const l of laps) {
+      const intKind = !useInt ? '' : l.intensity === 1 || l.intensity === 4 ? 'pause' : l.intensity === 2 || l.intensity === 3 ? 'skip' : 'rep';
+      if (l.start == null || l.end == null || !R.length) {
+        const r = l.start != null && l.end != null ? hrRange(recs, l.start, l.end) : {};
+        out.push(Object.assign(l, { hrMin: l.hrMin ?? r.mn, hrMax: l.hrMax ?? r.mx, kind: intKind })); continue;
+      }
+      const st = stops.find(x => x.a >= l.start - 2 && x.a < l.end);
+      const runA = st ? st.b : l.start;
+      const mv = firstMove(runA, l.end);
+      if (mv == null) {                         // the whole lap is standing / walking: a pause
+        pause((st ? st.b - st.a : 0) + l.t, l.start, l.end, runA);
+        continue;
+      }
+      let lead = mv - runA, last = lastMove(mv, l.end) ?? l.end, trail = l.end - last;
+      if (lead < 20) lead = 0;
+      if (trail < 20) trail = 0;
+      const preT = (st ? st.b - st.a : 0) + lead;
+      if (preT > 0) pause(preT, st ? st.b : l.start, lead ? mv : runA, lead ? mv : runA);
+      const a = lead ? mv : runA, b = trail ? last : l.end;
+      let d = l.d;
+      if (lead || trail) { const d0 = distAt(a), d1 = distAt(b); if (d0 != null && d1 != null) d = d1 - d0; }
+      const h = hrIn(a, b);
+      out.push({ d, t: l.t - lead - trail, pw: l.pw, hrAvg: l.hrAvg, hrMax: h.length ? Math.max(...h) : l.hrMax,
+                 hrMin: h.length ? Math.min(...h) : l.hrMin, kind: intKind });
+      if (trail) pause(trail, last, l.end, l.end);
+    }
+    // a few metres of walking after the last stop (e.g. 6 m) are no lap
+    while (out.length && !(out[out.length - 1].kind === 'pause') && out[out.length - 1].d < 30 && !(out[out.length - 1].pw > 0)) out.pop();
+    // a few seconds of moving right next to a pause (4 s, 0 m) belong to that pause
+    for (let i = out.length - 1; i >= 0; i--) {
+      const x = out[i], nb = out[i - 1]?.kind === 'pause' ? out[i - 1] : out[i + 1]?.kind === 'pause' ? out[i + 1] : null;
+      if (x.kind !== 'pause' && nb && x.t < 10 && !(x.d >= 20)) { nb.t += x.t; out.splice(i, 1); }
+    }
+    // interval with the watch stopped in the rests and laps every km (Coros/Garmin auto lap): 1000 m laps plus the
+    // rest lap between two pauses form one rep (1000 + 601 m = 1600 m), but only when there are several such stretches
+    const parts = []; let cur = [];
+    out.forEach(x => { if (x.kind === 'pause') { if (cur.length) parts.push(cur); cur = []; parts.push(x); } else cur.push(x); });
+    if (cur.length) parts.push(cur);
+    const auto = c => Array.isArray(c) && c.length >= 2 && c.slice(0, -1).every(x => Math.abs(x.d - 1000) < 0.6);
+    const runs = parts.filter(Array.isArray);
+    const merged = runs.length >= 2 && runs.filter(auto).length >= 2;
+    const res = [];
+    parts.forEach(c => {
+      if (!Array.isArray(c)) { res.push(c); return; }
+      if (merged && auto(c)) {
+        const hm = c.map(x => x.hrMax).filter(v => v != null);
+        res.push({ d: c.reduce((s, x) => s + (x.d || 0), 0), t: c.reduce((s, x) => s + x.t, 0), hrMax: hm.length ? Math.max(...hm) : undefined, kind: '' });
+      } else res.push(...c);
+    });
+    laps.splice(0, laps.length, ...res);
+    meta.stopped = stops.length > 0 || res.some(x => x.stop);
+    laps.meta = meta;
+    return laps;
+  }
+
+  function parseTCX(xml) {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    const kids = (el, name) => [...el.getElementsByTagName('*')].filter(e => e.localName === name);
+    const val = (el, name) => { const e = kids(el, name)[0]; return e ? Number(e.textContent) : null; };
+    const laps = kids(doc, 'Lap').map(lap => {
+      const hrs = kids(lap, 'HeartRateBpm').map(h => val(h, 'Value')).filter(v => v > 0);
+      const avg = kids(lap, 'AverageHeartRateBpm')[0], max = kids(lap, 'MaximumHeartRateBpm')[0];
+      const int = (kids(lap, 'Intensity')[0] || {}).textContent;
+      const aw = kids(lap, 'AvgWatts')[0], wts = kids(lap, 'Watts').map(e => Number(e.textContent)).filter(v => v >= 0);
+      return { t: val(lap, 'TotalTimeSeconds'), d: val(lap, 'DistanceMeters') ?? NaN,
+               hrAvg: avg ? val(avg, 'Value') : undefined, hrMax: max ? val(max, 'Value') : hrs.length ? Math.max(...hrs) : undefined,
+               hrMin: hrs.length ? Math.min(...hrs) : undefined, kind: int === 'Resting' ? 'pause' : '',
+               pw: aw ? Number(aw.textContent) : wts.length ? wts.reduce((s, v) => s + v, 0) / wts.length : undefined };
+    });
+    if (!laps.length) throw new Error('Am TCX-Fichier si keng Runden.');
+    if (!laps.some(l => l.kind === 'pause')) laps.forEach(l => l.kind = '');
+    // start time (UTC, shown in this browser's time zone) and start position for date, time of day, place and weather
+    const first = kids(doc, 'Lap')[0], st = Date.parse(first.getAttribute('StartTime') || (kids(doc, 'Id')[0] || {}).textContent);
+    const pos = kids(doc, 'Position')[0];
+    laps.meta = { start: isFinite(st) ? st / 1000 - FIT_EPOCH : undefined,
+                  lat: pos ? val(pos, 'LatitudeDegrees') : undefined, lon: pos ? val(pos, 'LongitudeDegrees') : undefined };
+    return laps;
+  }
+
+  // GPX has no laps → 1 km splits from the track (HR from Garmin/Strava extensions)
+  function parseGPX(xml) {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    const pts = [...doc.getElementsByTagName('*')].filter(e => e.localName === 'trkpt').map(e => {
+      const time = [...e.children].find(c => c.localName === 'time');
+      const hr = [...e.getElementsByTagName('*')].find(c => c.localName === 'hr');
+      return { lat: +e.getAttribute('lat'), lon: +e.getAttribute('lon'), ts: time ? Date.parse(time.textContent) / 1000 : NaN, hr: hr ? +hr.textContent : null };
+    }).filter(q => isFinite(q.ts));
+    if (pts.length < 2) throw new Error('Am GPX-Fichier ass keng Streck mat Zäiten.');
+    const R = 6371008.8, rad = x => x * Math.PI / 180;
+    const dist = (a, b) => { const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+    const laps = []; let cum = 0, mark = 1000, t0 = pts[0].ts, hrs = [];
+    for (let i = 1; i < pts.length; i++) {
+      const seg = dist(pts[i - 1], pts[i]);
+      if (pts[i].hr) hrs.push(pts[i].hr);
+      while (seg > 0 && cum + seg >= mark) {                 // interpolate the moment the km mark is crossed
+        const ts = pts[i - 1].ts + (pts[i].ts - pts[i - 1].ts) * (mark - cum) / seg;
+        laps.push({ d: 1000, t: ts - t0, hrMax: hrs.length ? Math.max(...hrs) : undefined, hrMin: hrs.length ? Math.min(...hrs) : undefined, kind: 'rep' });
+        t0 = ts; mark += 1000; hrs = [];
+      }
+      cum += seg;
+    }
+    const restD = cum - (mark - 1000);
+    if (restD > 1) laps.push({ d: restD, t: pts[pts.length - 1].ts - t0, hrMax: hrs.length ? Math.max(...hrs) : undefined, hrMin: hrs.length ? Math.min(...hrs) : undefined, kind: 'rep' });
+    laps.meta = { start: pts[0].ts - FIT_EPOCH, lat: pts[0].lat, lon: pts[0].lon };
+    return laps;
+  }
+
+  // Garmin Connect "Export Original" = ZIP with one .fit inside
+  async function unzipFirst(buf, re) {
+    const dv = new DataView(buf);
+    let e = buf.byteLength - 22;
+    while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+    if (e < 0) throw new Error('ZIP-Fichier konnt net gelies ginn.');
+    let p = dv.getUint32(e + 16, true);
+    const n = dv.getUint16(e + 10, true);
+    for (let i = 0; i < n; i++) {
+      const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true);
+      const nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true);
+      const lho = dv.getUint32(p + 42, true);
+      const name = new TextDecoder().decode(new Uint8Array(buf, p + 46, nl));
+      p += 46 + nl + xl + cl;
+      if (!re.test(name)) continue;
+      const start = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true);
+      const data = new Uint8Array(buf, start, csize);
+      if (method === 0) return { name, buf: data.slice().buffer };
+      const out = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      return { name, buf: await new Response(out).arrayBuffer() };
+    }
+    throw new Error('Am ZIP ass keen FIT/TCX/GPX-Fichier.');
+  }
+
+  // what is in the file? (by content, so renamed files and missing extensions work too)
+  async function sniff(file) {
+    const b = new Uint8Array(await file.slice(0, 512).arrayBuffer()), str = new TextDecoder().decode(b);
+    if (b.length >= 12 && String.fromCharCode(b[8], b[9], b[10], b[11]) === '.FIT') return 'fit';
+    if (b[0] === 0x50 && b[1] === 0x4B) return 'zip';
+    if (str.startsWith('%PDF')) return 'pdf';
+    if (/TrainingCenterDatabase/i.test(str)) return 'tcx';
+    if (/<gpx/i.test(str)) return 'gpx';
+    if (/^\s*</.test(str)) return /\.tcx$/i.test(file.name) ? 'tcx' : 'gpx';
+    return 'image';
+  }
+  async function parseActivity(file, kind) {
+    let buf = await file.arrayBuffer();
+    if (kind === 'zip') {
+      const z = await unzipFirst(buf, /\.(fit|tcx|gpx)$/i);
+      buf = z.buf; kind = /\.fit$/i.test(z.name) ? 'fit' : /\.tcx$/i.test(z.name) ? 'tcx' : 'gpx';
+    }
+    if (kind === 'fit') return parseFIT(buf);
+    const txt = new TextDecoder().decode(buf);
+    return kind === 'tcx' ? parseTCX(txt) : parseGPX(txt);
+  }
+
+  // ---------- activity meta (FIT): date, time of day, weather ----------
+  let impMeta = null;
+  const metaFields = m => {
+    if (!m) return {};
+    const o = {};
+    if (m.start != null) {
+      const utc = (m.start + FIT_EPOCH) * 1000;
+      // local time: offset recorded by the watch if present, else this browser's time zone
+      const d = m.tzOffset != null ? new Date(utc + m.tzOffset * 1000) : new Date(utc - new Date(utc).getTimezoneOffset() * 60000);
+      o.date = d.toISOString().slice(0, 10); o.clock = d.toISOString().slice(11, 16);
+    }
+    if (m.temp != null) o.temp = String(m.temp);
+    if (m.lat != null && m.lon != null) { o.lat = m.lat; o.lon = m.lon; }
+    if (m.wind != null) o.wind = dec(m.wind, 1).replace(/,0$/, '');
+    return o;
+  };
+  const metaText = m => {
+    const o = metaFields(m), parts = [];
+    if (o.date) parts.push(`${o.date.split('-').reverse().join('.')} ${o.clock}`);
+    if (o.temp) parts.push(`${o.temp} °C`);
+    if (o.wind) parts.push(`Wand ${o.wind} km/h`);
+    if (m && m.temp == null) parts.push(m.sensorTemp != null ? `keng Wiederdonnéeën (Auer-Sensor ${m.sensorTemp} °C, net iwwerholl)` : 'keng Wiederdonnéeën');
+    return parts.length ? ' ' + parts.join(' · ') + '.' : '';
+  };
+
+  // date, time of day and start place of an activity file go straight into the sheet (the file is what was run);
+  // the place name comes from the GPS start via OpenStreetMap, weather then follows for that place
+  async function placeName(lat, lon) {
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&accept-language=de&lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`);
+      const a = r.ok ? (await r.json()).address || {} : {};
+      // in Luxembourg the village (Gilsdorf, not the commune Bettendorf), abroad the city (Lissabon, not the quarter Madalena)
+      return (a.country_code === 'lu' ? a.village || a.town || a.city : a.city || a.town || a.village) || a.municipality || a.hamlet || a.suburb || '';
+    } catch { return ''; }
+  }
+  async function takeMeta(m) {
+    const mf = metaFields(m);
+    if (!mf.date) return '';
+    S.date = mf.date; S.clock = mf.clock;
+    // weather of the last training must not stay: the file's own values (Garmin), else Open-Meteo fills them anew
+    S.temp = mf.temp || ''; S.wind = mf.wind || ''; S.wxAuto = null;
+    let place = '';
+    if (mf.lat != null) { S.wxLat = mf.lat; S.wxLon = mf.lon; place = await placeName(mf.lat, mf.lon); if (place) S.place = place; }
+    fillMeta(); calc(); maybeWeather();
+    return place;
+  }
+
+  // ---------- entries → sheet ----------
+  function applyEntries(list, training) {
+    const reps = [], pd = new Map();       // metres covered in each pause (jog back down) → pause comment
+    list.forEach(e => {
+      if (e.type === 'rep') {
+        const m = metres(e.dist);                                  // import works in metres, the sheet in km
+        reps.push(Object.assign(blankRep(), { dist: isFinite(m) ? fmtNum(Math.round(m / 10) / 100) : '', time: e.time, w: e.w, hr: e.hr, note: e.note }));
+      }
+      else if (e.type === 'pause' && reps.length) {
+        const r = reps[reps.length - 1], m = metres(e.dist);
+        if (isFinite(m) && m > 0) pd.set(r, { m: (pd.get(r)?.m || 0) + m, down: pd.get(r)?.down || /rof/i.test(e.note) });
+        if (r.pTime || r.pHr) {          // two pauses in a row → one pause: times add up, lowest HR
+          const a = secs(r.pTime), b = secs(e.time);
+          if (isFinite(b)) r.pTime = fmtMS((isFinite(a) ? a : 0) + b);
+          if (e.hr && (!r.pHr || +e.hr < +r.pHr)) r.pHr = e.hr;
+        } else Object.assign(r, { pTime: e.time, pHr: e.hr, pNote: e.note });
+      }
+    });
+    pd.forEach((x, r) => { r.pNote = (x.down ? 'rof ' : '') + fmtNum(Math.round(x.m / 100) / 10) + ' km' + (x.down ? '' : ' locker'); });
+    if (!reps.length) return false;
+    S.reps = reps;
+    if (training) S.training = training;                       // plan import: the plan names the session
+    if (planDate) S.date = planDate;
+    // date / time / weather from a FIT file: today's default date is replaced, typed values are kept
+    const mf = metaFields(impMeta);
+    if (mf.date && (!S.date || S.date === defaults().date)) S.date = mf.date;
+    for (const k of ['clock', 'temp', 'wind']) if (mf[k] && !S[k]) S[k] = mf[k];
+    if (impMeta) { S.wxLat = mf.lat ?? ''; S.wxLon = mf.lon ?? ''; }   // weather for where the activity started
+    fillMeta(); buildRows(); calc(); showTimes(); maybeWeather();
+    return true;
+  }
+
+  // ---------- dialog ----------
+  const mode = () => document.querySelector('input[name=impMode]:checked').value;
+  const setMode = m => document.querySelector(`input[name=impMode][value=${m}]`).checked = true;
+  let planSummary = '';
+  function renderPreview() {
+    const tb = $('impPrev').tBodies[0];
+    tb.innerHTML = entries.map((e, i) => `
+      <tr class="t-${e.type}" data-i="${i}">
+        <td><select data-p="type">
+          <option value="rep"${e.type === 'rep' ? ' selected' : ''}>Rep</option>
+          <option value="pause"${e.type === 'pause' ? ' selected' : ''}>Paus</option>
+          <option value="skip"${e.type === 'skip' ? ' selected' : ''}>– ignoréieren</option></select></td>
+        <td class="in"><input data-p="dist" class="num"></td>
+        <td class="in"><input data-p="time" class="num"></td>
+        <td class="in"><input data-p="w" class="num" inputmode="numeric"></td>
+        <td class="in"><input data-p="hr" class="num" inputmode="numeric"></td>
+        <td><input data-p="note"></td>
+      </tr>`).join('');
+    tb.querySelectorAll('input[data-p]').forEach(el => el.value = entries[el.closest('tr').dataset.i][el.dataset.p]);
+    $('impPrevWrap').hidden = !entries.length;
+    const n = entries.filter(e => e.type === 'rep').length;
+    $('impApply').disabled = !n;
+    $('impApply').textContent = n ? `${n} Rep${n > 1 ? 's' : ''} iwwerhuelen` : 'Iwwerhuelen';
+  }
+  $('impPrev').addEventListener('input', e => {
+    const tr = e.target.closest('tr'), ent = entries[tr.dataset.i], p = e.target.dataset.p;
+    if (p !== 'type') { ent[p] = e.target.value; return; }
+    ent.type = e.target.value; tr.className = 't-' + ent.type;
+    if (ent.pw > 0) ent.w = ent.type === 'rep' ? String(Math.round(ent.pw)) : '';
+    if (ent.hrs.length) { ent.hr = String(ent.type === 'pause' ? Math.min(...ent.hrs) : Math.max(...ent.hrs)); tr.querySelector('[data-p=hr]').value = ent.hr; }
+    renderPreview();
+  });
+  // two sources can be combined: the plan (part 1 / field "Plang als Text": what was planned) and the laps (watch file, Strava or
+  // lap screenshot: what was measured). With both, the plan decides which laps are reps; laps in between are the pause.
+  let lapSlot = null, lapSrc = '', lapInfo = '', lapName = '', planName = '';
+  // GPX holds only the GPS track, no laps of the watch: the tool makes 1 km splits, intervals cannot be found in it
+  const GPX_NOTE = 'GPX huet keng Ronne vun der Auer, just d\'GPS-Spur (dofir km-Splits). Fir Intervalle w.e.gl. d\'FIT- oder TCX-Datei huelen.';
+  const hasXPlan = t => /\d\s*[x×]\s*[\d(]/i.test(t || '');
+  function evaluate() {
+    const text = $('impText').value;
+    if (!text.trim()) { combine(); return; }          // nothing typed: keep what was loaded (FIT laps stay)
+    $('impDays').innerHTML = '';
+    if (mode() === 'plan') {
+      planDate = '';
+      dayBlocks = splitDays(text);
+      if (dayBlocks.length > 1) {
+        $('impDays').innerHTML = '<b style="align-self:center">Dag:</b>' + dayBlocks.map((b, i) => {
+          const r = parsePlan(b.lines.join('\n'));
+          return `<button data-d="${i}" title="${b.lines.join(' · ').replace(/"/g, '&quot;')}">${b.day}${r.entries.some(e => e.type === 'rep') ? '' : ' (–)'}</button>`;
+        }).join('');
+        // preselect the block with the most reps
+        let best = 0, bestN = -1;
+        dayBlocks.forEach((b, i) => { const n = parsePlan(b.lines.join('\n')).entries.filter(e => e.type === 'rep').length; if (n > bestN) { bestN = n; best = i; } });
+        pickDay(best);
+        return;
+      }
+      if (dayBlocks.length === 1) { pickDay(0); return; }          // one day named → its date too
+      $('impPlan').value = text.split('\n').map(l => l.trim()).filter(Boolean).join('; ');
+    } else {
+      lapSlot = parseLaps(text); lapSrc = 'Screenshot'; lapInfo = ''; lapName ||= 'Screenshot';
+    }
+    combine();
+  }
+  const unreadText = u => u.length ? ` Net verstan: „${u.join('“, „')}“ – Plang verbesseren.` : '';
+  function pickDay(i) {
+    $('impDays').querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.d === i));
+    planDate = dateOfDay(dayBlocks[i].day);
+    $('impPlan').value = dayBlocks[i].lines.join('; ');
+    combine();
+  }
+  // plan reps → laps: each planned rep takes the next lap(s) whose distance (or duration) is within 15 % of the
+  // target; several laps without a pause in between can form one rep (auto lap 1000 m + 631 m = 8 min threshold).
+  // Where the plan has a pause after a rep (also "rof trabéieren" on hills), at least one lap lies in between.
+  function mergePlan(laps, plan) {
+    const steps = [];
+    plan.forEach(e => {
+      if (e.type === 'rep') steps.push({ d: metres(e.dist), t: secs(e.time), note: e.note, gap: false, down: HILL.test(e.note || '') });
+      else if (e.type === 'pause' && steps.length) { const st = steps[steps.length - 1]; st.gap = true; st.down ||= /rof/i.test(e.note); }
+    });
+    const L = laps.map(e => ({ e, d: isFinite(e.gps) ? e.gps : metres(e.dist), t: secs(e.time), stop: e.stop }));
+    const groups = []; let k = 0;
+    for (const [s, r] of steps.entries()) {
+      const byD = isFinite(r.d), T = byD ? r.d : r.t;
+      if (!isFinite(T)) return { entries: null, found: groups.length };
+      let hit = null;
+      for (let i = k; i < L.length && !hit; i++) {
+        if (L[i].stop) continue;
+        let sum = 0;
+        for (let j = i; j < L.length && !L[j].stop; j++) {
+          sum += (byD ? L[j].d : L[j].t) || 0;
+          if (Math.abs(sum - T) / T <= 0.15) { hit = [i, j]; break; }
+          if (sum > T * 1.15) break;
+        }
+      }
+      if (!hit) return { entries: null, found: groups.length };
+      groups.push(hit);
+      k = hit[1] + 1 + (r.gap && s < steps.length - 1 ? 1 : 0);
+    }
+    const first = groups[0][0], last = groups[groups.length - 1][1], out = [];
+    for (let i = 0; i < L.length; i++) {
+      const g = groups.findIndex(x => x[0] === i);
+      if (g >= 0) {                              // one rep from laps i … j
+        const [a, b] = groups[g], part = L.slice(a, b + 1), r = steps[g];
+        const hrs = part.flatMap(x => x.e.type === 'pause' ? [] : x.e.hrs.length ? [Math.max(...x.e.hrs)] : x.e.hr ? [+x.e.hr] : []);
+        const d = part.reduce((s, x) => s + (x.d || 0), 0), t = part.reduce((s, x) => s + (x.t || 0), 0);
+        const pwT = part.filter(x => x.e.pw > 0 && x.t > 0), pT = pwT.reduce((s, x) => s + x.t, 0);
+        const w = pT ? Math.round(pwT.reduce((s, x) => s + x.e.pw * x.t, 0) / pT) : '';
+        out.push(E('rep', { dist: isFinite(r.d) ? fmtNum(r.d) : fmtNum(Math.round(d * 10) / 10), time: fmtCs(t), w: String(w),
+          hr: hrs.length ? String(Math.max(...hrs)) : '', hrs, note: r.note || '' }));
+        i = b; continue;
+      }
+      const type = i > first && i < last ? 'pause' : 'skip', o = Object.assign({}, L[i].e, { type });
+      const prev = groups.findLastIndex(x => x[1] < i);       // hills: the lap after a rep is the jog back down
+      if (type === 'pause' && prev >= 0 && steps[prev].down && isFinite(L[i].d) && !o.note) o.note = 'rof';
+      if (o.hrs.length) o.hr = String(type === 'pause' ? Math.min(...o.hrs) : Math.max(...o.hrs));
+      if (type === 'pause') o.w = '';
+      out.push(o);
+    }
+    return { found: groups.length, entries: out };
+  }
+  function combine() {
+    const plan = parsePlan($('impPlan').value);
+    const nPlan = plan.entries.filter(e => e.type === 'rep').length;
+    planSummary = plan.summary;
+    const dTxt = planDate ? ` Datum: ${planDate.split('-').reverse().join('.')}.` : '';
+    let msg = '', err = plan.unread.length > 0;
+    if (lapSlot) {
+      const copy = () => lapSlot.map(e => Object.assign({}, e));
+      const auto = `${lapSrc}: ${lapSlot.length} Runden`;
+      if (nPlan) {
+        const m = mergePlan(lapSlot, plan.entries);
+        if (m.entries) { entries = m.entries; msg = `${auto}. Plang „${plan.summary}“: ${nPlan} Reps an de Runde fonnt, d'Runden dertëscht sinn d'Pausen.`; }
+        else if (/^GPX/.test(lapSrc)) { entries = copy(); err = true; msg = `${auto}. De Plang „${plan.summary}“ ka net an de km-Splits gesicht ginn.`; }
+        else { entries = copy(); err = true;
+               msg = `${auto}. De Plang „${plan.summary}“ passt net op d'Runden (${m.found} vu ${nPlan} Reps fonnt), dofir automatesch Erkennung. Plang verbesseren oder eidel maachen.`; }
+      } else {
+        entries = copy();
+        msg = `${auto}, dovun ${entries.filter(e => e.type === 'rep').length} Reps (automatesch erkannt). Méi sécher mam Plang derbäi (Feld 1 oder als Text, z.B. „4x8min (4min)“).`;
+      }
+      msg += lapInfo + dTxt;
+    } else if (nPlan) {
+      entries = plan.entries;
+      msg = `Plang: ${plan.summary} (${nPlan} Reps).${dTxt} Fir Zäiten a Watt kann een elo nach d'FIT-Datei oder e Screenshot derbäi zéien.`;
+    } else {
+      entries = [];
+      if ($('impPlan').value.trim()) { msg = 'Keng Reps am Plang fonnt.'; err = true; }
+    }
+    if (msg || err) status(msg + unreadText(plan.unread) + (entries.length ? ' W.e.gl. kontrolléieren.' : ''), err);
+    // what each of the two parts holds
+    $('gotPlan').textContent = nPlan ? '✓ ' + (planName ? planName + ': ' : '') + plan.summary : planName ? planName + ': keng Reps fonnt' : '';
+    $('gotLaps').textContent = lapSlot ? `✓ ${lapName || lapSrc} · ${lapSlot.length} Ronnen` : '';
+    $('zPlan').classList.toggle('has', !!nPlan); $('zLaps').classList.toggle('has', !!lapSlot);
+    renderPreview();
+  }
+  let planTimer = 0;
+  $('impPlan').addEventListener('input', () => { clearTimeout(planTimer); planTimer = setTimeout(combine, 500); });
+  $('impDays').addEventListener('click', e => { if (e.target.dataset.d !== undefined) pickDay(+e.target.dataset.d); });
+  document.querySelectorAll('input[name=impMode]').forEach(r => r.onchange = evaluate);
+  $('impReparse').onclick = evaluate;
+  $('impCancel').onclick = () => dlg.close();
+  $('impApply').onclick = () => {
+    if (hasData() && !confirm('Et sinn schonn Donnéeën an de Reps. Iwwerschreiwen?')) return;
+    // the plan names the session, unless it is just what the runner typed in "Training" ("4x1600 (60s)" stays);
+    // a summary of an earlier import ("5×60s + 8min") is renewed ("5×60s hills + 8min threshold")
+    const pv = $('impPlan').value.trim(), tr = String(S.training || '').trim();
+    if (applyEntries(entries, pv && (/ \+ /.test(tr) || pv !== tr) ? planSummary : null)) dlg.close();
+  };
+  $('btnImport').onclick = () => {
+    entries = []; impMeta = null; planDate = ''; lapSlot = null; lapInfo = ''; lapName = ''; planName = ''; status(''); $('impDays').innerHTML = '';
+    $('gotPlan').textContent = $('gotLaps').textContent = ''; $('zPlan').classList.remove('has'); $('zLaps').classList.remove('has');
+    $('impText').value = '';
+    // "4x1600 (60s)" already typed → used as plan; "5x60s hills + 8min threshold" (summary of an earlier import) = several steps
+    $('impPlan').value = hasXPlan(S.training) ? S.training.replace(/\s+\+\s+/g, '; ') : '';
+    renderPreview();
+    $('impFilePlan').value = $('impFileLaps').value = ''; stravaUi();
+    dlg.showModal();
+  };
+
+  // image → canvas, upscaled, greyscale, dark screenshots inverted (Tesseract wants dark text on light ground)
+  async function prepImage(src) {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Bild konnt net gelies ginn.')); i.src = src; });
+    const k = Math.min(3, Math.max(1, 1600 / img.naturalWidth)), c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0, c.width, c.height);
+    const px = g.getImageData(0, 0, c.width, c.height), d = px.data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4) { const y = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; d[i] = d[i + 1] = d[i + 2] = y; sum += y; }
+    if (sum / (d.length / 4) < 110) for (let i = 0; i < d.length; i += 4) d[i] = d[i + 1] = d[i + 2] = 255 - d[i];
+    g.putImageData(px, 0, 0);
+    return c;
+  }
+  async function ocr(canvas) {
+    status('Texterkennung gëtt gelueden …');
+    await loadScript(TESS);
+    const { data } = await Tesseract.recognize(canvas, 'eng', {
+      logger: m => { if (m.status === 'recognizing text') status(`Text gëtt erkannt … ${Math.round(m.progress * 100)} %`); }
+    });
+    return data.text;
+  }
+  async function pdfText(file) {
+    status('PDF gëtt gelies …');
+    await loadScript(PDFJS);
+    pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    let text = '';
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p), tc = await page.getTextContent();
+      const lines = [];
+      tc.items.filter(it => it.str.trim()).forEach(it => {
+        const y = it.transform[5], x = it.transform[4];
+        let ln = lines.find(l => Math.abs(l.y - y) < 3);
+        if (!ln) lines.push(ln = { y, parts: [] });
+        ln.parts.push({ x, s: it.str });
+      });
+      lines.sort((a, b) => b.y - a.y).forEach(l => text += l.parts.sort((a, b) => a.x - b.x).map(q => q.s).join(' ').replace(/\s+/g, ' ').trim() + '\n');
+      if (text.replace(/\s/g, '').length < 20) {           // scanned PDF → OCR the rendered page
+        const vp = page.getViewport({ scale: 2.5 }), c = document.createElement('canvas');
+        c.width = vp.width; c.height = vp.height;
+        await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+        text += await ocr(c) + '\n';
+      }
+    }
+    return text;
+  }
+  // slot: 'plan' / 'laps' when dropped on (or picked in) one of the two parts, else recognised from the content
+  async function importFile(file, slot) {
+    try {
+      $('impApply').disabled = true;
+      const kind = await sniff(file);
+      if (['fit', 'zip', 'tcx', 'gpx'].includes(kind)) {
+        status('Aktivitéit gëtt gelies …');
+        const laps = await parseActivity(file, kind);
+        lapSlot = lapsToEntries(laps); lapSrc = kind === 'gpx' ? 'GPX (km-Splits)' : 'Auer-Fichier'; lapName = file.name || lapSrc;
+        impMeta = laps.meta || null;
+        lapInfo = (impMeta?.stopped ? ' Pausen, wou d\'Auer gestoppt war, sinn eegen Zeilen.' : '') + metaText(impMeta);
+        if (kind === 'gpx') lapInfo = ' ' + GPX_NOTE;
+        const place = await takeMeta(impMeta);
+        lapInfo += ' Datum, Auerzäit' + (place ? ` a Plaz (${place})` : '') + ' sinn agedroen.';
+        combine();
+        return;
+      }
+      let text;
+      if (kind === 'pdf') text = await pdfText(file);
+      else { const url = URL.createObjectURL(file); try { text = await ocr(await prepImage(url)); } finally { URL.revokeObjectURL(url); } }
+      $('impText').value = text;
+      const m = slot || (DAY.test(text.split('\n').find(l => DAY.test(l.trim())) || '') || /\d+\s*[x×]\s*[\d(]/.test(text) ? 'plan' : 'laps');
+      setMode(m);
+      if (m === 'plan') planName = /^screenshot/i.test(file.name) ? 'Screenshot' : file.name; else lapName = /^screenshot/i.test(file.name) ? 'Screenshot' : file.name;
+      evaluate();
+    } catch (err) { status(err.message || String(err), true); }
+  }
+  // several files at once (plan + watch data): one after the other, each fills its part
+  const openWith = async (files, slot) => {
+    if (!dlg.open) $('btnImport').onclick();
+    for (const f of files) await importFile(f, slot);
+  };
+  [['zPlan', 'impFilePlan', 'plan'], ['zLaps', 'impFileLaps', 'laps']].forEach(([z, inp, slot]) => {
+    $(inp).onchange = e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) openWith(fs, slot); };
+    $(z).addEventListener('dragover', e => { if (hasFiles(e)) { e.preventDefault(); $(z).classList.add('over'); } });
+    $(z).addEventListener('dragleave', () => $(z).classList.remove('over'));
+    $(z).addEventListener('drop', e => {                  // dropped on one part: that is what it is
+      if (!hasFiles(e)) return;
+      e.preventDefault(); e.stopPropagation(); $(z).classList.remove('over');
+      dragDepth = 0; document.body.classList.remove('dragging');
+      const fs = [...e.dataTransfer.files]; if (fs.length) openWith(fs, slot);
+    });
+  });
+  // drag & drop anywhere on the page (or onto the drop zone) and paste (Cmd/Ctrl+V) of a screenshot
+  const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
+  let dragDepth = 0;
+  document.addEventListener('dragenter', e => { if (hasFiles(e)) { dragDepth++; document.body.classList.add('dragging'); } });
+  document.addEventListener('dragleave', e => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragging'); } });
+  document.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+  document.addEventListener('drop', e => {
+    if (!hasFiles(e)) return;
+    e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragging');
+    const fs = [...e.dataTransfer.files]; if (fs.length) openWith(fs);
+  });
+  // paste: screenshots arrive as images. A copied FIT file usually arrives only as its name (plus a file icon
+  // as picture): browsers hand over images and text, the file itself only in some (Chrome on a computer).
+  document.addEventListener('paste', e => {
+    const cd = e.clipboardData; if (!cd) return;
+    const txt = (cd.getData('text/plain') || '').trim();
+    const isName = /\.(fit|tcx|gpx|zip)$/i.test(txt);
+    let files = [...(cd.files || [])];
+    if (!files.length) files = [...(cd.items || [])].filter(i => i.kind === 'file').map(i => i.getAsFile()).filter(Boolean);
+    files = files.filter(f => !(isName && /^image\//.test(f.type)));      // the icon of a copied file is no screenshot
+    if (!files.length) {
+      if (isName) {
+        e.preventDefault();
+        if (!dlg.open) $('btnImport').onclick();
+        status('Den Browser gëtt beim Apechen just den Numm vum Fichier weider, net de Fichier selwer. W.e.gl. de FIT-Fichier an d\'Feld zéien oder op „Fotoen oder Fichieren …“ klicken a wielen.', true);
+      }
+      return;                                            // normal text paste stays untouched
+    }
+    e.preventDefault();
+    openWith(files.map(f => new File([f], f.name && f.name !== 'image.png' ? f.name : 'screenshot.png', { type: f.type })));
+  });
+
+  // ================= Strava (OAuth via a small Cloudflare Worker that keeps the client secret) =================
+  const STRAVA = { clientId: '', worker: '' };   // filled in after the Strava app + worker are set up
+  const SKEY = 'velo-strava';
+  const sGet = () => { try { return JSON.parse(localStorage.getItem(SKEY)) || null; } catch { return null; } };
+  const sSet = v => { try { v ? localStorage.setItem(SKEY, JSON.stringify(v)) : localStorage.removeItem(SKEY); } catch {} };
+  const stravaOn = !!(STRAVA.clientId && STRAVA.worker);
+  const redirectUri = location.origin + location.pathname;
+  async function tokenCall(body) {
+    const r = await fetch(STRAVA.worker + '/token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .catch(() => { throw new Error('Keng Verbindung mam Strava-Server (Internet?).'); });
+    const j = await r.json();
+    if (!r.ok || !j.access_token) throw new Error('Strava-Login huet net geklappt' + (j.message ? ': ' + j.message : '.'));
+    sSet({ access: j.access_token, refresh: j.refresh_token, exp: j.expires_at });
+    return j.access_token;
+  }
+  async function stravaToken() {
+    const t = sGet(); if (!t) return null;
+    if (t.exp * 1000 > Date.now() + 60000) return t.access;
+    return tokenCall({ refresh_token: t.refresh });
+  }
+  async function stravaApi(path) {
+    const tok = await stravaToken();
+    if (!tok) throw new Error('Net mat Strava verbonnen.');
+    const r = await fetch(STRAVA.worker + '/api/' + path, { headers: { Authorization: 'Bearer ' + tok } })
+      .catch(() => { throw new Error('Keng Verbindung mam Strava-Server (Internet?).'); });
+    if (r.status === 401) { sSet(null); throw new Error('Strava-Verbindung ofgelaf. W.e.gl. nei verbannen.'); }
+    if (r.status === 429) throw new Error('Strava-Limit erreecht. W.e.gl. an e puer Minutten nach eng Kéier.');
+    if (!r.ok) throw new Error('Strava-Feeler ' + r.status);
+    return r.json();
+  }
+  function stravaLogin() {
+    location.href = 'https://www.strava.com/oauth/authorize?' + new URLSearchParams({
+      client_id: STRAVA.clientId, redirect_uri: redirectUri, response_type: 'code',
+      approval_prompt: 'auto', scope: 'activity:read_all', state: 'velo'
+    });
+  }
+  async function stravaList() {
+    status('Aktivitéite vu Strava ginn gelueden …');
+    const acts = (await stravaApi('athlete/activities?per_page=15')).filter(a => /ride/i.test(a.sport_type || a.type));
+    stravaActs = acts;
+    $('stravaList').innerHTML = acts.map(a => `<button data-a="${a.id}"><span>${a.name.replace(/</g, '&lt;')}</span>
+      <small>${new Date(a.start_date_local).toLocaleDateString('de-LU')} · ${dec(a.distance / 1000, 2)} km · ${fmtHMS(a.elapsed_time)}</small></button>`).join('')
+      || '<small>Keng Velo-Aktivitéiten fonnt.</small>';
+    status('Aktivitéit auswielen.');
+  }
+  let stravaActs = [];
+  async function stravaLoad(id) {
+    status('Runde vu Strava ginn gelueden …'); impMeta = null;
+    const [laps, streams] = await Promise.all([
+      stravaApi(`activities/${id}/laps`),
+      stravaApi(`activities/${id}/streams?keys=heartrate,time&key_by_type=true`).catch(() => ({}))
+    ]);
+    const hr = streams.heartrate?.data || [];
+    const list = laps.map(l => {
+      const seg = hr.slice(l.start_index, l.end_index + 1).filter(v => v > 0);
+      return { d: l.distance, t: l.elapsed_time, pw: l.average_watts, hrAvg: l.average_heartrate, hrMax: l.max_heartrate ?? (seg.length ? Math.max(...seg) : undefined),
+               hrMin: seg.length ? Math.min(...seg) : undefined, kind: '' };
+    });
+    if (!list.length) throw new Error('Dës Aktivitéit huet keng Runden.');
+    lapSlot = lapsToEntries(list); lapSrc = 'Strava'; lapInfo = ' Strava gëtt Zäite just op d\'Sekonn.';
+    const a = stravaActs.find(x => String(x.id) === String(id));
+    if (a) impMeta = { start: Date.parse(a.start_date) / 1000 - FIT_EPOCH, tzOffset: (Date.parse(a.start_date_local) - Date.parse(a.start_date)) / 1000,
+                       lat: a.start_latlng?.[0], lon: a.start_latlng?.[1] };
+    combine();
+  }
+  function stravaUi() {
+    $('stravaBox').hidden = !stravaOn;
+    const on = !!sGet();
+    $('stravaBtn').textContent = on ? 'Lescht Strava-Aktivitéiten weisen' : 'Mat Strava verbannen';
+    $('stravaOff').hidden = !on;
+  }
+  $('stravaBtn').onclick = () => (sGet() ? stravaList() : stravaLogin()).catch(err => status(err.message, true));
+  $('stravaOff').onclick = () => { sSet(null); $('stravaList').innerHTML = ''; stravaUi(); status('Strava getrennt.'); };
+  $('stravaList').addEventListener('click', e => {
+    const b = e.target.closest('button[data-a]');
+    if (b) stravaLoad(b.dataset.a).catch(err => status(err.message, true));
+  });
+  // back from Strava's login page: ?code=…&state=velo
+  (async () => {
+    const q = new URLSearchParams(location.search);
+    if (!stravaOn || q.get('state') !== 'velo') return;
+    history.replaceState(null, '', redirectUri);
+    $('btnImport').onclick(); stravaUi();
+    if (q.get('error') || !q.get('code')) { status('Strava-Login ofgebrach.', true); return; }
+    if (!(q.get('scope') || '').includes('activity:read')) { status('Ouni Zougrëff op d\'Aktivitéite geet et net. W.e.gl. nach eng Kéier verbannen an den Hoken setzen.', true); return; }
+    try { status('Mat Strava verbannen …'); await tokenCall({ code: q.get('code') }); stravaUi(); await stravaList(); }
+    catch (err) { status(err.message, true); }
+  })();
+
+  // ================= Weather from Open-Meteo (free, no key) for the date + time of day =================
+  // place: GPS start of an imported activity, else the field "Plaz" (default Diekirch, looked up with Open-Meteo's
+  // geocoder). Only empty fields (or values it filled itself) are set.
+  const WX_HOME = { lat: 49.86687, lon: 6.15451, name: 'Diekirch' };
+  // the geocoder knows official names only: Luxembourgish names → official name
+  const LB_PLACES = { dikrech: 'Diekirch', ettelbréck: 'Ettelbruck', ettelbreck: 'Ettelbruck', iechternach: 'Echternach', wolz: 'Wiltz',
+    miersch: 'Mersch', lëtzebuerg: 'Luxembourg', letzebuerg: 'Luxembourg', 'esch-uelzecht': 'Esch-sur-Alzette', esch: 'Esch-sur-Alzette',
+    gréiwemaacher: 'Grevenmacher', réimech: 'Remich', klierf: 'Clervaux', veianen: 'Vianden', déifferdeng: 'Differdange',
+    diddeleng: 'Dudelange', bartreng: 'Bertrange', stroossen: 'Strassen', ierpeldeng: 'Erpeldange', bettenduerf: 'Bettendorf',
+    biekerech: 'Bigonville', kolmer: 'Colmar-Berg', 'kolmer-bierg': 'Colmar-Berg', rued: 'Redange', séiss: 'Syren' };
+  const geoCache = {};
+  async function geocode(name) {
+    const k = name.trim().toLowerCase();
+    if (!k || k === 'diekirch') return WX_HOME;
+    if (geoCache[k]) return geoCache[k];
+    const q = new URLSearchParams({ name: LB_PLACES[k] || name.trim(), count: 5, language: 'de' });
+    const r = await fetch('https://geocoding-api.open-meteo.com/v1/search?' + q);
+    const res = r.ok ? (await r.json()).results || [] : [];
+    const hit = res.find(x => x.country_code === 'LU') || res[0];          // prefer the Luxembourg one
+    if (!hit) throw new Error('place');
+    return geoCache[k] = { lat: hit.latitude, lon: hit.longitude, name: hit.name + (hit.country_code && hit.country_code !== 'LU' ? ` (${hit.country_code})` : '') };
+  }
+  let wxTimer = 0, wxReq = 0, wxBusy = false;
+  function wxIsAuto() { return !!(S.wxAuto && S.temp === S.wxAuto.temp && S.wind === S.wxAuto.wind); }
+  const indoor = () => /indoor|bannen|rolle|roll|trainer|zwift|home/i.test(S.surface || '');
+  async function maybeWeather() {
+    if (!S.date || !S.clock || indoor()) return;
+    const auto = wxIsAuto();
+    if (!auto && S.temp && S.wind) return;                              // typed by the runner → keep
+    const when = new Date(S.date + 'T' + S.clock);
+    if (isNaN(when) || when - Date.now() > 30 * 60000) return;          // training not run yet
+    const gps = S.wxLat !== '' && S.wxLat != null && S.wxLon !== '' && S.wxLon != null;
+    const id = ++wxReq;
+    let home;
+    if (!gps) {
+      try { home = await geocode(S.place || ''); }
+      catch { if (id === wxReq) $('wxNote').textContent = `Plaz „${S.place}“ net fonnt. W.e.gl. eng aner Schreifweis probéieren (z.B. Ettelbruck).`; return; }
+      if (id !== wxReq) return;
+    }
+    const lat = gps ? +S.wxLat : home.lat, lon = gps ? +S.wxLon : home.lon;
+    const key = [S.date, S.clock, lat.toFixed(3), lon.toFixed(3)].join('|');
+    if (auto && S.wxAuto.key === key) return;
+    // the forecast API also holds the last ~3 months; older dates come from the archive (ERA5)
+    const base = (Date.now() - when) / 864e5 > 60 ? 'https://archive-api.open-meteo.com/v1/archive' : 'https://api.open-meteo.com/v1/forecast';
+    const q = new URLSearchParams({ latitude: lat.toFixed(4), longitude: lon.toFixed(4), hourly: 'temperature_2m,wind_speed_10m',
+                                    wind_speed_unit: 'kmh', timezone: 'auto', start_date: S.date, end_date: S.date });
+    wxBusy = true; $('wxNote').textContent = 'Wieder gëtt gesicht …';
+    try {
+      const r = await fetch(base + '?' + q);
+      if (!r.ok) throw new Error();
+      const h = (await r.json()).hourly || {};
+      if (id !== wxReq) return;
+      // value at the time of day, linear between the two full hours
+      const [hh, mm] = S.clock.split(':').map(Number), x = hh + mm / 60, i = Math.min(Math.floor(x), 23), j = Math.min(i + 1, 23), f = x - i;
+      const at = arr => !arr || arr[i] == null ? null : arr[j] == null ? arr[i] : arr[i] + (arr[j] - arr[i]) * f;
+      const t = at(h.temperature_2m), w = at(h.wind_speed_10m);
+      if (t == null && w == null) throw new Error();
+      const auto2 = wxIsAuto();                                         // the runner may have typed meanwhile
+      if (t != null && (!S.temp || auto2)) S.temp = dec(t, 1).replace(/,0$/, '');
+      if (w != null && (!S.wind || auto2)) S.wind = String(Math.round(w));
+      S.wxAuto = { temp: S.temp, wind: S.wind, key, src: gps ? 'Startplaz vum Training' : home.name };
+      $('temp').value = S.temp; $('wind').value = S.wind;
+    } catch {
+      if (id === wxReq) { wxBusy = false; $('wxNote').textContent = 'Wieder konnt net automatesch gelies ginn (Internet?). Temperatur a Wand w.e.gl. selwer aginn.'; return; }
+    } finally { if (id === wxReq && wxBusy) { wxBusy = false; calc(); } }
+  }
+
+  // ================= Bikes: types + the rider's last bikes (only in this browser) =================
+  const GARAGE = 'velo-garage', BIKE_TYPES = ['Road', 'TT', 'Gravel', 'MTB', 'Indoor-Trainer'];
+  const garageGet = () => { try { return JSON.parse(localStorage.getItem(GARAGE)) || []; } catch { return []; } };
+  function fillBikes() {
+    const own = garageGet();
+    $('bikeList').innerHTML = [...own, ...BIKE_TYPES.filter(t => !own.some(b => b.toLowerCase() === t.toLowerCase()))]
+      .map(v => `<option value="${String(v).replace(/"/g, '&quot;')}">`).join('');
+  }
+  $('bike').addEventListener('change', () => {
+    const b = String(S.bike || '').trim(); if (!b) return;
+    const g = [b, ...garageGet().filter(x => x.toLowerCase() !== b.toLowerCase())].slice(0, 8);
+    try { localStorage.setItem(GARAGE, JSON.stringify(g)); } catch {}
+    fillBikes();
+  });
+  fillBikes();
+  window.veloImport = { importFile, parsePlan, parseLaps, parseFIT, evaluate, mergePlan, combine };   // for testing
+  // for the SauerBeen app: a FIT/TCX/GPX/ZIP file shared to the app is handed over as base64 → import dialog
+  window.SauerBeen = {
+    importFile(base64, name = 'aktivitaet.fit') {
+      const bin = atob(base64), u = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      return openWith([new File([u], name)]);
+    }
+  };
+
+  fillMeta(); buildRows(); calc(); showTimes(); maybeWeather();
+})();
+</script>
+</body>
+</html>
