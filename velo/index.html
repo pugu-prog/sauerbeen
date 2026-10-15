@@ -206,6 +206,28 @@
   }
   body.dragging #dropAll { display: grid; }
   @media print { #dropAll { display: none !important; } }
+  /* PDF made in the browser (html2pdf): the same look as the print CSS above, while body has the class pdfmode */
+  body.pdfmode .sheet { box-shadow: none; margin: 0; padding: 0 8px; width: 718px; max-width: 718px; font-size: 11px; background: #fff; }   /* A4 190 mm */
+  body.pdfmode .sheet .noprint, body.pdfmode .sheet .rowbtns, body.pdfmode .sheet td.del, body.pdfmode .sheet th.del,
+  body.pdfmode .sheet .tip, body.pdfmode .sheet .note, body.pdfmode .sheet .rackrow, body.pdfmode .sheet textarea { display: none !important; }
+  body.pdfmode .sheet .printonly { display: block; }
+  body.pdfmode .sheet .ptitle { display: flex !important; align-items: center; gap: 10px; background: var(--sb-blue); color: #fff;
+            font: 900 15px "Titillium Web", Inter, sans-serif; text-transform: uppercase; padding: 6px 10px; margin: 0 0 8px; }
+  body.pdfmode .sheet .ptitle .sblogo { height: 24px; }
+  body.pdfmode .sheet input { border-color: transparent; background: transparent; }
+  body.pdfmode .sheet .meta input { background: var(--input); border-color: var(--input-line); }
+  body.pdfmode .sheet td.in, body.pdfmode .sheet td.in input { background: transparent; }
+  body.pdfmode .sheet tr.empty { display: none; }
+  body.pdfmode .sheet table { min-width: 0; }
+  body.pdfmode .sheet th, body.pdfmode .sheet td { height: 20px; }
+  body.pdfmode .sheet .commentprint { display: block !important; white-space: pre-wrap; border: 1px solid var(--input-line); background: var(--input); padding: 4px 6px; min-height: 40px; }
+  body.pdfmode .sheet .tablewrap { overflow: visible; }
+  /* also on a phone: the computer layout (the phone layout of .meta is a screen media query) */
+  body.pdfmode .sheet .meta { grid-template-columns: 130px 1fr 110px 90px 100px 90px !important; }
+  body.pdfmode .sheet .meta .span2 { grid-column: span 2 !important; }
+  body.pdfmode .sheet .meta .span3 { grid-column: span 3 !important; }
+  body.pdfmode .sheet .meta .span5 { grid-column: span 5 !important; }
+  body.pdfmode .sheet .meta label { text-align: right !important; }
   #stravaBox { border: 1px solid #f3c7a8; background: #fff6ef; border-radius: 6px; padding: 8px 10px; margin: 10px 0; }
   #stravaBox[hidden] { display: none; }
   #stravaBtn { background: #fc4c02; border-color: #fc4c02; color: #fff; }
@@ -359,7 +381,7 @@
   <p class="tip">Zäiten: „9:58,2“ (min:sek), „1:02:30“ (h:min:sek) oder „45“ (sek). Distanz a km: „20“, „20,5“, „20km“ oder „800m“. Watt: Duerchschnëttswatt vun der Rep.
     D'Faarwen funktionéieren wéi am Excel: 3-Faarwen-Skala (Min · Median · Max) iwwer d'Kolonn inkl. MIN/MAX-Referenz.
     Bei „Indoor“ gëtt keen Wieder gesicht.
-    Alles gëtt automatesch am Browser zwëschegespäichert. „PDF fir den Trainer“ → am Drockdialog „Als PDF späicheren“ wielen; den Numm gëtt automatesch virgeschloen.</p>
+    Alles gëtt automatesch am Browser zwëschegespäichert. „PDF fir den Trainer“ späichert de PDF direkt, mam Pdf-Num als Fichiersnumm.</p>
 </div>
 
 <div id="dropAll">Foto oder Fichier hei lassgoen</div>
@@ -735,7 +757,9 @@
     catch { alert('Fichier konnt net gelies ginn.'); }
     e.target.value = '';
   };
-  // suggested PDF file name = page title = "261014 Guy -- Outdoor -- 4x8min" (like the Excel), set in calc().
+  // PDF file name = Pdf-Num "261014 Guy -- Outdoor -- 4x8min" (like the Excel). Browsers name a printed PDF after the page
+  // title, but some take the title the page had when it was opened ("SauerBeen Trainingsfeedback Velo"). So the PDF is
+  // made here (html2pdf) and saved under the Pdf-Num; the browser's print dialog is only the fallback.
   // Inside the SauerBeen app (WebView) window.print() does nothing: the app prints natively with the print CSS.
   // anonymous click counter (only a number per button, nothing about the runner or the training); live site only
   const countUse = k => { if (location.hostname === 'pugu-prog.github.io') fetch('https://abacus.jasoncameron.dev/hit/velo-sauerbeen/' + k, { keepalive: true }).catch(() => {}); };
@@ -743,8 +767,35 @@
     countUse('pdf');
     if (window.webkit?.messageHandlers?.sauerbeenPrint) window.webkit.messageHandlers.sauerbeenPrint.postMessage(document.title);
     else if (window.SauerBeenApp?.print) window.SauerBeenApp.print(document.title);
-    else window.print();
+    else makePdf().catch(() => window.print());
   };
+  const HTML2PDF = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+  let pdfBusy = false;
+  async function makePdf() {
+    if (pdfBusy) return;
+    pdfBusy = true;
+    const btn = $('btnPdf'), label = btn.textContent, dt = $('date');
+    btn.textContent = 'PDF gëtt gemaach …'; btn.disabled = true;
+    const file = ($('pdfName').textContent.replace(/\s+/g, ' ').trim() || 'Trainingsfeedback Velo').replace(/[\\/:*?"<>|]/g, '-') + '.pdf';
+    try {
+      await loadScript(HTML2PDF);
+      document.activeElement?.blur?.(); showTimes();
+      // the date as 14.10.2026 (a date field would be drawn as 2026-10-14)
+      dt.type = 'text'; dt.value = S.date ? S.date.split('-').reverse().join('.') : '';
+      document.body.classList.add('pdfmode');
+      await html2pdf().set({
+        margin: [12, 10, 12, 10], filename: file,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, scrollX: 0, scrollY: 0, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.comment', '.summary'] }
+      }).from(document.querySelector('.sheet')).save();
+    } finally {
+      document.body.classList.remove('pdfmode');
+      dt.type = 'date'; dt.value = S.date || '';
+      btn.textContent = label; btn.disabled = false; pdfBusy = false;
+    }
+  }
 
   // ================= Excel export: the template „Velo SauerBeen Trainingsfeedback Template.xlsx“, filled in =================
   // The template's XML parts come from velo-vorlag.js; cells, formulas, styles and colour scales stay as in the Excel.
