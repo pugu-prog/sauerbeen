@@ -1799,7 +1799,7 @@
         const laps = await parseActivity(file, kind);
         lapSlot = lapsToEntries(laps); lapSrc = kind === 'gpx' ? 'GPX (km-Splits)' : 'Auer-Fichier'; lapName = file.name || lapSrc;
         impMeta = laps.meta || null;
-        lapInfo = (impMeta?.stopped ? ' Pausen, wou d\'Auer gestoppt war, sinn eegen Zeilen.' : '') + metaText(impMeta);
+        lapInfo = metaText(impMeta);          // (Velo: stopped time is not a row of its own, the power decides)
         if (kind === 'gpx') lapInfo = ' ' + GPX_NOTE;
         const place = await takeMeta(impMeta);
         lapInfo += ' Datum, Auerzäit' + (place ? ` a Plaz (${place})` : '') + ' sinn agedroen.';
