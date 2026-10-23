@@ -1282,39 +1282,72 @@
                  hrMin: h.length ? Math.min(...h) : l.hrMin, kind: intKind });
       if (trail) pause(trail, last, l.end, l.end);
     }
-    // lap button pressed late or early (rep lap 5:46 for a 5-min interval): an easy part of ≥ 20 s at the end or the start
-    // of a hard lap becomes a pause of its own. Hard / easy = the same 25 % power jump as classify(); laps that were
-    // pressed on time are not touched (no easy part, or shorter than 20 s).
+    // ---- intervals from the power, not only from the lap button ----
+    // The lap button is often pressed late or forgotten after an effort: every lap is cut into hard and easy stretches
+    // (power smoothed over 11 s). Hard = above the power that separates reps from pauses: the 25 % jump between the lap
+    // averages (as classify()), else – laps unusable – the two groups of the 30-s power if they lie clearly apart.
+    // Stretches: easy ≥ 20 s, hard ≥ 60 s; shorter ones belong to their neighbour. Laps pressed on time stay as they are.
     const P = recs.filter(r => r.pw != null);
-    const hard = out.filter(x => x.pw > 0 && x.t >= 20).map(x => x.pw).sort((a, b) => b - a);
-    let pThr = 0;
-    for (let i = 1; i < hard.length; i++) if (hard[i - 1] / hard[i] > 1.25) { pThr = (hard[i] + hard[i - 1]) / 2; break; }
+    const pThr = (() => {
+      // (1) the power itself: 30-s averages fall into two clearly separate groups (Otsu; ≥ 80 % of the spread lies
+      //     between the groups) → reps and pauses, even when the laps are of no use (button forgotten)
+      if (P.length >= 600) {
+        const v = [];
+        for (let i = 0; i + 30 <= P.length; i += 30) { const m = P.slice(i, i + 30).reduce((s, q) => s + q.pw, 0) / 30; if (m >= 10) v.push(m); }
+        const srt = v.sort((a, b) => a - b), N = srt.length, mean = a => a.reduce((s, q) => s + q, 0) / a.length;
+        if (N >= 8) {
+          const mu = mean(srt), tot = srt.reduce((s, q) => s + (q - mu) ** 2, 0) / N;
+          let best = 0, bt = 0;
+          for (let k = 1; k < N; k++) {
+            const m0 = mean(srt.slice(0, k)), m1 = mean(srt.slice(k)), b = k / N * (N - k) / N * (m1 - m0) ** 2;
+            if (b > best) { best = b; bt = k; }
+          }
+          const m0 = mean(srt.slice(0, bt)), m1 = mean(srt.slice(bt));
+          if (tot > 0 && best / tot >= 0.8 && N - bt >= 4 && m1 / m0 >= 1.25) return (srt[bt - 1] + srt[bt]) / 2;
+        }
+      }
+      // (2) else the 25 % jump between the lap averages (as classify()), not for the auto laps of a plain ride
+      const run = out.filter(x => x.d > 0);
+      if (run.length >= 2 && run.slice(0, -1).every(x => Math.abs(x.d - run[0].d) < 1)) return 0;
+      const hard = out.filter(x => x.pw > 0 && x.t >= 20).map(x => x.pw).sort((a, b) => b - a);
+      for (let i = 1; i < hard.length; i++) if (hard[i - 1] / hard[i] > 1.25) return (hard[i] + hard[i - 1]) / 2;
+      return 0;
+    })();
+    const part = (s, e) => {
+      const rs = recs.filter(r => r.ts >= s && r.ts < e), hs = rs.filter(r => r.hr > 0).map(r => r.hr), ps = rs.filter(r => r.pw != null).map(r => r.pw);
+      const ds = rs.filter(r => r.dist != null);
+      return { t: e - s, d: ds.length > 1 ? ds[ds.length - 1].dist - ds[0].dist : NaN, start: s, end: e,
+               pw: ps.length ? ps.reduce((q, v) => q + v, 0) / ps.length : undefined,
+               hrMax: hs.length ? Math.max(...hs) : undefined, hrMin: hs.length ? Math.min(...hs) : undefined };
+    };
     if (P.length && pThr) for (let i = out.length - 1; i >= 0; i--) {
       const x = out[i];
-      if (!(x.pw >= pThr) || x.kind === 'pause' || x.start == null || x.end == null) continue;
+      if (x.start == null || x.end == null || x.end - x.start < 80) continue;
       const seg = P.filter(r => r.ts >= x.start && r.ts < x.end);
-      if (seg.length < 60) continue;
-      const sm = seg.map((r, j) => { const w = seg.slice(Math.max(0, j - 2), j + 3); return w.reduce((s, q) => s + q.pw, 0) / w.length; });
-      const first = sm.findIndex(v => v >= pThr), last = sm.length - 1 - [...sm].reverse().findIndex(v => v >= pThr);
-      if (first < 0) continue;
-      const mean = a => a.length ? a.reduce((s, q) => s + q.pw, 0) / a.length : Infinity;
-      const leadS = first >= 20 && mean(seg.slice(0, first)) < pThr * 0.8 ? seg[first].ts : null;
-      const trailS = sm.length - 1 - last >= 20 && mean(seg.slice(last + 1)) < pThr * 0.8 ? seg[last + 1].ts : null;
-      if (!leadS && !trailS) continue;
-      const a = leadS ?? x.start, b = trailS ?? x.end;
-      const part = (s, e) => {
-        const rs = recs.filter(r => r.ts >= s && r.ts < e), hs = rs.filter(r => r.hr > 0).map(r => r.hr), ps = rs.filter(r => r.pw != null).map(r => r.pw);
-        const ds = rs.filter(r => r.dist != null);
-        return { t: e - s, d: ds.length > 1 ? ds[ds.length - 1].dist - ds[0].dist : NaN, start: s, end: e,
-                 pw: ps.length ? ps.reduce((q, v) => q + v, 0) / ps.length : undefined,
-                 hrMax: hs.length ? Math.max(...hs) : undefined, hrMin: hs.length ? Math.min(...hs) : undefined };
-      };
-      const rep = Object.assign(part(a, b), { kind: x.kind || '' });
-      rep.t = x.t - (a - x.start) - (x.end - b);             // keep the lap's timer time (hundredths) for the rep
-      const pieces = [];
-      if (leadS) pieces.push(Object.assign(part(x.start, a), { kind: 'pause' }));
-      pieces.push(rep);
-      if (trailS) pieces.push(Object.assign(part(b, x.end), { kind: 'pause' }));
+      if (seg.length < 80) continue;
+      const sm = seg.map((r, j) => { const w = seg.slice(Math.max(0, j - 5), j + 6); return w.reduce((s, q) => s + q.pw, 0) / w.length; });
+      // runs of hard / easy seconds
+      let runs = [];
+      sm.forEach((v, j) => { const hd = v >= pThr; if (runs.length && runs[runs.length - 1].hd === hd) runs[runs.length - 1].n++; else runs.push({ hd, j, n: 1 }); });
+      // too short stretches join their neighbours (shortest first), until all are long enough
+      const minN = r => r.hd ? 60 : 20;
+      for (;;) {
+        const k = runs.reduce((b, r, q) => r.n < minN(r) && (b < 0 || r.n < runs[b].n) ? q : b, -1);
+        if (k < 0 || runs.length === 1) break;
+        const nb = k === 0 ? 1 : k === runs.length - 1 ? k - 1 : runs[k - 1].n >= runs[k + 1].n ? k - 1 : k + 1;
+        const a = Math.min(k, nb);
+        runs.splice(a, 2, { hd: runs[nb].hd, j: runs[a].j, n: runs[a].n + runs[a + 1].n });
+        for (let q = runs.length - 1; q > 0; q--) if (runs[q].hd === runs[q - 1].hd) { runs[q - 1].n += runs[q].n; runs.splice(q, 1); }
+      }
+      if (runs.length < 2 || !runs.some(r => r.hd)) continue;
+      // exact change: within ±6 s of the smoothed change, the second where the power before and after differs most
+      const avgP = (a, b) => { const w = seg.slice(Math.max(0, a), Math.max(0, b)); return w.length ? w.reduce((s, q) => s + q.pw, 0) / w.length : 0; };
+      const exact = j => { let bj = j, bd = -1; for (let k = Math.max(1, j - 6); k <= Math.min(seg.length - 1, j + 6); k++) { const d = Math.abs(avgP(k, k + 5) - avgP(k - 5, k)); if (d > bd) { bd = d; bj = k; } } return bj; };
+      const cut = runs.map((r, q) => q ? seg[exact(r.j)].ts : x.start).concat(x.end);
+      const pieces = runs.map((r, q) => Object.assign(part(cut[q], cut[q + 1]), { kind: r.hd ? (x.kind === 'pause' ? '' : x.kind || '') : 'pause' }));
+      // hard pieces keep the lap's timer time (hundredths) when the lap had only one
+      const hp = pieces.filter((pc, q) => runs[q].hd);
+      if (hp.length === 1) hp[0].t = x.t - pieces.filter((pc, q) => !runs[q].hd).reduce((s, pc) => s + pc.t, 0);
       out.splice(i, 1, ...pieces);
     }
     // a few metres of walking after the last stop (e.g. 6 m) are no lap
