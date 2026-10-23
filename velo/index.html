@@ -1282,6 +1282,41 @@
                  hrMin: h.length ? Math.min(...h) : l.hrMin, kind: intKind });
       if (trail) pause(trail, last, l.end, l.end);
     }
+    // lap button pressed late or early (rep lap 5:46 for a 5-min interval): an easy part of ≥ 20 s at the end or the start
+    // of a hard lap becomes a pause of its own. Hard / easy = the same 25 % power jump as classify(); laps that were
+    // pressed on time are not touched (no easy part, or shorter than 20 s).
+    const P = recs.filter(r => r.pw != null);
+    const hard = out.filter(x => x.pw > 0 && x.t >= 20).map(x => x.pw).sort((a, b) => b - a);
+    let pThr = 0;
+    for (let i = 1; i < hard.length; i++) if (hard[i - 1] / hard[i] > 1.25) { pThr = (hard[i] + hard[i - 1]) / 2; break; }
+    if (P.length && pThr) for (let i = out.length - 1; i >= 0; i--) {
+      const x = out[i];
+      if (!(x.pw >= pThr) || x.kind === 'pause' || x.start == null || x.end == null) continue;
+      const seg = P.filter(r => r.ts >= x.start && r.ts < x.end);
+      if (seg.length < 60) continue;
+      const sm = seg.map((r, j) => { const w = seg.slice(Math.max(0, j - 2), j + 3); return w.reduce((s, q) => s + q.pw, 0) / w.length; });
+      const first = sm.findIndex(v => v >= pThr), last = sm.length - 1 - [...sm].reverse().findIndex(v => v >= pThr);
+      if (first < 0) continue;
+      const mean = a => a.length ? a.reduce((s, q) => s + q.pw, 0) / a.length : Infinity;
+      const leadS = first >= 20 && mean(seg.slice(0, first)) < pThr * 0.8 ? seg[first].ts : null;
+      const trailS = sm.length - 1 - last >= 20 && mean(seg.slice(last + 1)) < pThr * 0.8 ? seg[last + 1].ts : null;
+      if (!leadS && !trailS) continue;
+      const a = leadS ?? x.start, b = trailS ?? x.end;
+      const part = (s, e) => {
+        const rs = recs.filter(r => r.ts >= s && r.ts < e), hs = rs.filter(r => r.hr > 0).map(r => r.hr), ps = rs.filter(r => r.pw != null).map(r => r.pw);
+        const ds = rs.filter(r => r.dist != null);
+        return { t: e - s, d: ds.length > 1 ? ds[ds.length - 1].dist - ds[0].dist : NaN, start: s, end: e,
+                 pw: ps.length ? ps.reduce((q, v) => q + v, 0) / ps.length : undefined,
+                 hrMax: hs.length ? Math.max(...hs) : undefined, hrMin: hs.length ? Math.min(...hs) : undefined };
+      };
+      const rep = Object.assign(part(a, b), { kind: x.kind || '' });
+      rep.t = x.t - (a - x.start) - (x.end - b);             // keep the lap's timer time (hundredths) for the rep
+      const pieces = [];
+      if (leadS) pieces.push(Object.assign(part(x.start, a), { kind: 'pause' }));
+      pieces.push(rep);
+      if (trailS) pieces.push(Object.assign(part(b, x.end), { kind: 'pause' }));
+      out.splice(i, 1, ...pieces);
+    }
     // a few metres of walking after the last stop (e.g. 6 m) are no lap
     while (out.length && !(out[out.length - 1].kind === 'pause') && out[out.length - 1].d < 30 && !(out[out.length - 1].pw > 0)) out.pop();
     // a few seconds of moving right next to a pause (4 s, 0 m) belong to that pause
