@@ -1205,8 +1205,10 @@
         }
         if (def.g === 18) { if (v[2] != null) meta.start ??= v[2]; if (v[57] != null) meta.sensorTemp ??= v[57]; }
         if (def.g === 34 && v[5] != null && v[253] != null) meta.tzOffset = v[5] - v[253];
-        if (def.g === 19) laps.push({ start: v[2], end: v[253] ?? ts, t: (v[8] ?? v[7]) / 1000, d: v[9] != null ? v[9] / 100 : NaN,
-                                      hrAvg: v[15], hrMax: v[16], hrMin: v[63], intensity: v[23], pw: v[19] });
+        // lap end = its timestamp; some devices write the activity start there for every lap → start + elapsed time (as Lafen 0f52031)
+        if (def.g === 19) { const t0 = v[253] ?? ts, el = v[7] ?? v[8];
+          laps.push({ start: v[2], end: v[2] != null && el != null && !(t0 > v[2]) ? v[2] + Math.round(el / 1000) : t0, t: (v[8] ?? v[7]) / 1000,
+                      d: v[9] != null ? v[9] / 100 : NaN, hrAvg: v[15], hrMax: v[16], hrMin: v[63], intensity: v[23], pw: v[19] }); }
       }
       off = end + 2;                                         // skip CRC, next chained FIT file
     }
@@ -1285,7 +1287,11 @@
     // a few seconds of moving right next to a pause (4 s, 0 m) belong to that pause
     for (let i = out.length - 1; i >= 0; i--) {
       const x = out[i], nb = out[i - 1]?.kind === 'pause' ? out[i - 1] : out[i + 1]?.kind === 'pause' ? out[i + 1] : null;
-      if (x.kind !== 'pause' && nb && x.t < 10 && !(x.d >= 20)) { nb.t += x.t; out.splice(i, 1); }
+      if (x.kind !== 'pause' && nb && x.t < 10 && !(x.d >= 20)) {
+        nb.t += x.t;                              // its HR too: the lowest HR is often in the last seconds of the rest
+        if (x.hrMin != null && !(nb.hrMin <= x.hrMin)) nb.hrMin = x.hrMin;
+        out.splice(i, 1);
+      }
     }
     // interval with the watch stopped in the rests and laps every km (Coros/Garmin auto lap): 1000 m laps plus the
     // rest lap between two pauses form one rep (1000 + 601 m = 1600 m), but only when there are several such stretches
@@ -1619,6 +1625,9 @@
       const auto = `${lapSrc}: ${lapSlot.length} Runden`;
       if (nPlan) {
         const m = mergePlan(lapSlot, plan.entries);
+        // only part of the plan found and the automatic recognition finds more reps: the plan does not fit (e.g. first rep 5:46 for 5 min)
+        const nAuto = lapSlot.filter(e => e.type === 'rep').length;
+        if (m.entries && m.found < nPlan && nAuto > m.found) m.entries = null;
         if (m.entries) { entries = m.entries; msg = `${auto}. Plang „${plan.summary}“: ${m.found < nPlan ? `${m.found} vun ${nPlan}` : nPlan} Reps an de Runde fonnt, d'Runden dertëscht sinn d'Pausen.`; }
         else if (/^GPX/.test(lapSrc)) { entries = copy(); err = true; msg = `${auto}. De Plang „${plan.summary}“ ka net an de km-Splits gesicht ginn.`; }
         else { entries = copy(); err = true;
