@@ -1,0 +1,1151 @@
+<!doctype html>
+<html lang="lb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SauerBeen Trainingsfeedback Schwammen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Titillium+Web:wght@700;900&display=swap">
+<style>
+  /* SauerBeen look (as Lafen / Velo): navy bar, yellow accent, Titillium Web Black + Inter.
+     The sheet keeps the Excel colours of the other tools: blue inputs, grey results, red/yellow/green scale. */
+  :root {
+    --sb-blue: #293d96;
+    --sb-blue-dark: #1f2e72;
+    --sb-yellow: #ffed00;
+    --input: #cfe0f3;
+    --input-line: #8fb0d6;
+    --calc: #e3e1e1;
+    --line: #222;
+    --text: #414141;
+    --muted: #6b6b70;
+    --bg: #eef0f6;
+    --paper: #fff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.4 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+  .toolbar {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 10px 16px; background: var(--sb-blue); color: #fff;
+  }
+  .toolbar h1 {
+    display: flex; align-items: center; gap: 10px; margin: 0 auto 0 0;
+    font: 900 18px/1 "Titillium Web", Inter, sans-serif; letter-spacing: .02em; text-transform: uppercase;
+  }
+  .toolbar h1 .sub { font-weight: 700; opacity: .9; }
+  .sblogo { display: block; height: 30px; width: auto; flex: none; }
+  button {
+    font: inherit; font-weight: 500; padding: 6px 14px; border-radius: 18px; cursor: pointer;
+    border: 1px solid #c3c8da; background: #fff; color: var(--sb-blue);
+  }
+  button:hover { background: #f1f3fa; }
+  button:focus-visible { outline: 2px solid var(--sb-yellow); outline-offset: 2px; }
+  button.primary { background: var(--sb-blue); border-color: var(--sb-blue); color: #fff; }
+  button.primary:hover { background: var(--sb-blue-dark); }
+  .toolbar button, .toolbar a.btn { background: transparent; border: 1px solid rgba(255,255,255,.7); color: #fff; }
+  .toolbar a.btn { font-weight: 500; padding: 6px 14px; border-radius: 18px; text-decoration: none; }
+  .toolbar a.btn:hover, .toolbar button:hover { background: rgba(255,255,255,.12); }
+  .toolbar button.primary { background: var(--sb-yellow); border-color: var(--sb-yellow); color: var(--sb-blue); font-weight: 600; }
+  .toolbar button.primary:hover { background: #fff36b; }
+  .sheet {
+    max-width: 1040px; margin: 16px auto; padding: 20px 24px 28px;
+    background: var(--paper); box-shadow: 0 1px 4px rgba(0,0,0,.12);
+  }
+  .note {
+    background: #eef1fb; border-left: 4px solid var(--sb-yellow); color: var(--sb-blue);
+    padding: 5px 10px; margin: 0 0 12px; font-size: 13px;
+  }
+  .note .k { display: inline-block; width: 12px; height: 12px; vertical-align: -1px; margin: 0 3px 0 8px; border: 1px solid #555; }
+
+  /* Header block */
+  .meta {
+    display: grid; grid-template-columns: 130px 1fr 120px 120px 100px 90px; gap: 3px 6px;
+    align-items: center; margin-bottom: 14px;
+  }
+  .meta label { text-align: right; color: #333; }
+  .meta .span2 { grid-column: span 2; }
+  .meta .span3 { grid-column: span 3; }
+  .meta .span5 { grid-column: span 5; }
+  input, textarea, select {
+    font: inherit; color: inherit; width: 100%; min-width: 0;
+    border: 1px solid var(--input-line); background: var(--input);
+    padding: 2px 5px; border-radius: 2px;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--sb-blue); outline-offset: -1px; background: #fff; }
+  input.num { text-align: right; }
+  input.bad { outline: 2px solid #d33; }
+  input.ref { text-align: right; }
+  input.ref.own { font-weight: 700; }                 /* own value instead of the formula */
+  .calc {
+    background: var(--calc); border: 1px solid #b9b6b6; padding: 2px 5px; min-height: 24px;
+    border-radius: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .unit { position: relative; }
+  .unit input { padding-right: 46px; }
+  .unit span { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 12px; pointer-events: none; }
+  .cssbox { grid-column: 2 / span 5; font-size: 12px; color: var(--muted); }
+  .cssbox summary { cursor: pointer; color: var(--sb-blue); }
+  .cssbox .row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-top: 4px; }
+  .cssbox input { width: 80px; }
+
+  /* Table */
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 860px; }
+  th, td { border: 1px solid #999; padding: 0; height: 26px; text-align: center; }
+  th { font-weight: normal; padding: 2px 4px; background: #fff; }
+  td.right { text-align: right; padding: 0 6px; }
+  td input { border: 0; border-radius: 0; height: 100%; background: transparent; padding: 3px 6px; }
+  td.in { background: var(--input); }
+  td.cs input { background: transparent; }
+  td.out { padding: 0 6px; text-align: right; font-variant-numeric: tabular-nums; background: var(--calc); }
+  .ref td, .ref th { border-color: var(--line); }
+  .sec { background: var(--sb-blue); color: #fff; font: 900 14px "Titillium Web", Inter, sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+  tr.colhead th { border-top: 2px solid var(--line); border-bottom: 2px solid var(--line); }
+  tr.pause td:first-child { color: #444; }
+  tr.rep td:first-child { font-weight: 600; }
+  tr.tot td { border: 0; height: 28px; }
+  tr.tot td.calc { border: 1px solid #b9b6b6; text-align: right; padding: 0 6px; }
+  td.del { border: 0; width: 28px; }
+  td.del button { border: 0; background: none; color: #aaa; padding: 0 4px; font-size: 16px; }
+  td.del button:hover { color: #d33; }
+  .rowbtns { display: flex; gap: 8px; margin: 8px 0 14px; flex-wrap: wrap; }
+  .rowbtns .tgl { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--sb-blue); font-size: 13px; cursor: pointer; }
+  .rowbtns .tgl input { width: auto; }
+  .comment { display: grid; grid-template-columns: 110px 1fr; gap: 6px; align-items: start; margin-top: 12px; }
+  .comment b { padding-top: 4px; }
+  textarea { min-height: 70px; resize: vertical; }
+  .summary { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; color: #333; font-size: 13px; }
+  .summary b { font-variant-numeric: tabular-nums; }
+  .printonly, .commentprint { display: none; }
+  .tip { color: var(--muted); font-size: 12px; margin-top: 18px; }
+
+  @media screen and (max-width: 720px) {
+    .sheet { padding: 14px 16px; margin: 0; box-shadow: none; }
+    .meta { grid-template-columns: 110px 1fr; }
+    .meta .span2, .meta .span3, .meta .span5, .cssbox { grid-column: span 1; }
+    .cssbox { grid-column: 1 / -1; }
+    .meta label { text-align: left; }
+  }
+
+  @page { size: A4 portrait; margin: 12mm 10mm; }
+  @media print {
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: #fff; font-size: 10.5px; }
+    .toolbar, .noprint, .rowbtns, td.del, th.del, .tip, .note, .cssbox { display: none !important; }
+    .sheet { box-shadow: none; margin: 0; padding: 0; max-width: none; }
+    .printonly { display: block; }
+    .ptitle { display: flex !important; align-items: center; gap: 10px; background: var(--sb-blue); color: #fff;
+              font: 900 15px "Titillium Web", Inter, sans-serif; text-transform: uppercase; padding: 6px 10px; margin: 0 0 8px; }
+    .ptitle .sblogo { height: 24px; }
+    input, textarea { border-color: transparent; background: transparent; }
+    .meta input { background: var(--input); border-color: var(--input-line); }
+    td.in, td.in input { background: transparent; }
+    tr.empty { display: none; }
+    table { min-width: 0; }
+    th, td { height: 20px; }
+    textarea { display: none; }
+    .commentprint { display: block !important; white-space: pre-wrap; border: 1px solid var(--input-line); background: var(--input); padding: 4px 6px; min-height: 40px; }
+    .tablewrap { overflow: visible; }
+  }
+
+  /* Import dialog */
+  dialog#imp {
+    width: min(900px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 18px 20px;
+    border: 1px solid #bbb; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,.25);
+  }
+  dialog#imp::backdrop { background: rgba(20,25,35,.45); }
+  #imp h2 { font: 900 20px "Titillium Web", Inter, sans-serif; color: var(--sb-blue); text-transform: uppercase; margin: 0 0 4px; }
+  #imp .hint { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  #imp .row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 10px 0; }
+  #impStatus { font-size: 13px; color: var(--sb-blue); min-height: 18px; }
+  #impStatus.err { color: #c22; }
+  #imp details { margin: 10px 0; }
+  #imp summary { cursor: pointer; font-size: 13px; }
+  #impPrevWrap { overflow-x: auto; max-height: 45vh; overflow-y: auto; border: 1px solid #ddd; }
+  #impPrev { min-width: 620px; }
+  #impPrev th { position: sticky; top: 0; background: #f2f2f2; font-size: 12px; }
+  #impPrev td { height: 28px; }
+  #impPrev select { font: inherit; border: 0; background: transparent; width: 100%; padding: 3px; }
+  #impPrev tr.t-rep td:first-child { background: #e6f2e9; }
+  #impPrev tr.t-pause td:first-child { background: #fbf3d9; }
+  #impPrev tr.t-skip td { color: #999; }
+  #impPrev tr.t-skip input { color: #999; text-decoration: line-through; }
+  .zone {
+    display: grid; gap: 2px; place-items: center; align-content: center; text-align: center; cursor: pointer; position: relative;
+    border: 2px dashed var(--input-line); border-radius: 8px; background: #f3f8fd; padding: 14px 10px; min-height: 96px; margin: 8px 0;
+  }
+  .zone b { color: var(--sb-blue); }
+  .zone span { font-size: 12px; color: var(--muted); }
+  .zone .got { color: #1d7a3a; font-weight: 600; font-size: 12px; }
+  .zone .got:empty { display: none; }
+  .zone.has { border-style: solid; border-color: #63be7b; background: #eef8f1; }
+  .zone input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  body.dragging .zone { border-color: var(--sb-blue); background: #e3e8f8; }
+  #dropAll {
+    position: fixed; inset: 0; z-index: 50; display: none; place-items: center;
+    background: rgba(41,61,150,.15); border: 4px dashed var(--sb-blue); font: 900 24px "Titillium Web", Inter, sans-serif; color: var(--sb-blue);
+  }
+  body.dragging #dropAll { display: grid; }
+  @media print { #dropAll { display: none !important; } }
+  #imp .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1><img class="sblogo" src="sauerbeen-schriftzug.png" alt="SauerBeen"><span class="sub">Trainingsfeedback Schwammen</span></h1>
+  <button id="btnImport" title="Reps a Pausen aus der FIT-Datei vun der Auer a/oder dem Trainingsplang uleeën">Training importéieren</button>
+  <button id="btnNew" title="Trainingsdaten eidelmaachen, Num/Schwellen/Bassin bleiwen">Neien Training</button>
+  <button id="btnSave" title="Als JSON-Fichier späicheren">Späicheren</button>
+  <button id="btnLoad" title="JSON-Fichier lueden">Lueden</button>
+  <input type="file" id="fileIn" accept=".json,application/json" hidden>
+  <a class="btn" href="https://form.jotform.com/262735789931069" target="_blank" rel="noopener" title="Problem gemellt oder Iddi? Kuerze Formulaire fir d'Testpersounen">Feedback</a>
+  <button id="btnPdf" class="primary">PDF fir den Trainer</button>
+</div>
+
+<div class="sheet">
+  <p class="note">Blo Casen w.e.gl. ausfëllen, gro gëtt berechent.
+    <span class="k" style="background:var(--input)"></span>Agab
+    <span class="k" style="background:var(--calc)"></span>berechent</p>
+  <div class="printonly ptitle"><img class="sblogo" src="sauerbeen-schriftzug.png" alt="SauerBeen"><span id="ptitle"></span></div>
+
+  <div class="meta">
+    <label>Pdf-Num</label>
+    <div class="calc span5" id="pdfName"></div>
+
+    <label for="name">Num</label>
+    <input id="name" data-k="name" autocorrect="off" spellcheck="false">
+    <label for="css" title="Critical Swim Speed: d'Tempo pro 100 m, dat een ouni Paus laang halen kann (Schwammschwell)">CSS (Schwell)</label>
+    <div class="unit"><input id="css" data-k="css" class="num tm" inputmode="decimal" placeholder="1:45"><span>/100 m</span></div>
+    <label for="hrThr">HR Schwell</label>
+    <div><input id="hrThr" data-k="hrThr" class="num" inputmode="numeric" placeholder="150"></div>
+    <details class="cssbox noprint" id="cssBox">
+      <summary>CSS net bekannt? Aus engem 400 m + 200 m Test rechnen</summary>
+      <div class="row">
+        400 m an <input id="t400" class="num" inputmode="decimal" placeholder="7:20">
+        200 m an <input id="t200" class="num" inputmode="decimal" placeholder="3:25">
+        <span id="cssCalc"></span>
+        <button type="button" id="cssTake" disabled>als CSS iwwerhuelen</button>
+      </div>
+      <div>CSS = (Zäit 400 m − Zäit 200 m) / 2, d.h. Tempo pro 100 m. Béid Tester voll, mat genuch Paus dertëscht (oder un zwee Deeg).</div>
+    </details>
+
+    <label for="date">Datum</label>
+    <input id="date" data-k="date" type="date">
+    <label for="clock">Auerzäit</label>
+    <input id="clock" data-k="clock" type="time">
+    <span></span><span></span>
+
+    <label for="training">Training</label>
+    <input id="training" data-k="training" autocorrect="off" spellcheck="false" class="span5" placeholder="z.B. 10x200m (60s)">
+    <label for="pool">Bassin</label>
+    <input id="pool" data-k="pool" list="poolList" placeholder="25 m" autocomplete="off" title="Bassinslängt (fir Zich/Bunn a SWOLF) oder Fräiwaasser">
+    <label for="place">Plaz</label>
+    <input id="place" data-k="place" autocorrect="off" spellcheck="false" class="span3" placeholder="z.B. Schwämm Ettelbréck">
+    <label for="material">Material</label>
+    <input id="material" data-k="material" list="matList" autocorrect="off" spellcheck="false" class="span3" placeholder="z.B. Pull-Buoy, Paddelen, Flossen">
+    <label for="water">Waasser</label>
+    <div class="unit"><input id="water" data-k="water" class="num" inputmode="decimal" title="Waassertemperatur; beim FIT-Import de Wäert vum Auer-Sensor"><span>°C</span></div>
+    <label for="partner">Trainingspartner</label>
+    <input id="partner" data-k="partner" autocorrect="off" spellcheck="false" class="span3">
+    <span style="grid-column: span 2"></span>
+  </div>
+
+  <div class="tablewrap">
+  <table>
+    <colgroup>
+      <col style="width:5%"><col style="width:6%"><col style="width:11%"><col style="width:10%"><col style="width:9%">
+      <col style="width:7%"><col style="width:7%"><col style="width:8%"><col style="width:8%"><col><col style="width:28px">
+    </colgroup>
+    <tbody class="ref">
+      <tr>
+        <td class="sec" colspan="3">Schwammen</td><td style="border-top:0;border-left:2px solid var(--line)"></td>
+        <th>Pace /100 m</th><td style="border:0" colspan="2"></td><th>Max HR Rep.</th><th>Min HR Paus</th>
+        <td style="border:0" colspan="2"></td>
+      </tr>
+      <tr>
+        <td style="border:0" colspan="3"></td><td class="right">MIN</td>
+        <td class="cs" id="refPaceMin"><input class="num ref" data-k="rPaceMin" inputmode="decimal" title="Ännere geet; eidel maachen = nees d'Formel (CSS + 8 %)"></td>
+        <td style="border:0" colspan="2"></td>
+        <td class="cs" id="refHrMin"><input class="num ref" data-k="rHrMin" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel (HR Schwell − 15)"></td>
+        <td class="cs" id="refPauseMin"><input class="num ref" data-k="rPhrMin" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel (HR Schwell − 30)"></td>
+        <td style="border:0" colspan="2"></td>
+      </tr>
+      <tr>
+        <td style="border:0" colspan="3"></td><td class="right">MAX</td>
+        <td class="cs" id="refPaceMax"><input class="num ref" data-k="rPaceMax" inputmode="decimal" title="Ännere geet; eidel maachen = nees d'Formel (CSS − 8 %)"></td>
+        <td style="border:0" colspan="2"></td>
+        <td class="cs" id="refHrMax"><input class="num ref" data-k="rHrMax" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel (HR Schwell + 25)"></td>
+        <td class="cs" id="refPauseMax"><input class="num ref" data-k="rPhrMax" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel (HR Schwell + 10)"></td>
+        <td style="border:0" colspan="2"></td>
+      </tr>
+    </tbody>
+    <tbody>
+      <tr class="colhead">
+        <th>Rep.</th><th>Dist. (m)</th><th>Lag</th><th>Zäit (z.B. 4:58,2)</th><th>Pace /100 m</th>
+        <th title="Zich pro Bunn (Duerchschnëtt)">Zich/Bunn</th><th title="SWOLF = Sekonnen + Zich pro Bunn; manner = méi effizient">SWOLF</th>
+        <th>Max HR Rep.</th><th>Min HR Paus</th><th style="text-align:left">Kommentar, Rep-specific</th><th class="del" style="border:0"></th>
+      </tr>
+    </tbody>
+    <tbody id="rows"></tbody>
+    <tbody>
+      <tr class="tot">
+        <td></td><td class="calc" id="totDist"></td><td></td><td class="calc" id="totTime"></td><td class="calc" id="totPace"></td>
+        <td colspan="6"></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="rowbtns">
+    <button id="addRep">+ Rep</button>
+    <button id="remRep">− Rep</button>
+    <button id="fromTraining" title="Liest z.B. „10x200m (60s)“ oder „4x(100m-50m) (20s)“ aus dem Feld Training">Reps aus „Training“ uleeën</button>
+    <label class="tgl" title="Nëmmen d'Weisen (Tabell, PDF): gerechent gëtt ëmmer mat de genaue Zäiten"><input type="checkbox" id="tenths"> Zäite just op Zéngtel</label>
+  </div>
+  <datalist id="poolList"><option value="25 m"><option value="50 m"><option value="33,3 m"><option value="Fräiwaasser"></datalist>
+  <datalist id="matList"><option value="Pull-Buoy"><option value="Paddelen"><option value="Flossen"><option value="Brett"><option value="Schnorchel"><option value="Pull-Buoy + Paddelen"><option value="Neopren"></datalist>
+  <datalist id="strokeList"><option value="Kraul"><option value="Réck"><option value="Broscht"><option value="Delfin"><option value="Lagen"><option value="Technik"><option value="Been"><option value="Gemëscht"></datalist>
+  <datalist id="distList"><option value="25"><option value="50"><option value="100"><option value="200"><option value="400"><option value="800"><option value="1500"></datalist>
+
+  <div class="summary" id="summary"></div>
+
+  <div class="comment">
+    <b>Kommentar:</b>
+    <div>
+      <textarea data-k="comment" id="comment" autocorrect="off" spellcheck="false"></textarea>
+      <div class="commentprint" id="commentPrint"></div>
+    </div>
+  </div>
+
+  <p class="tip">Zäiten: „4:58,2“ (min:sek), „1:02:30“ (h:min:sek) oder „45“ (sek). Distanz a Meter: „200“ oder „1,5km“.
+    Pace = Zäit pro 100 m. Zich/Bunn = Duerchschnëtt vun den Zich pro Bassinslängt (bei der Auer: 1 Zuch = ee Rhythmus, beim Kraul all zweeten Aarm).
+    SWOLF = Sekonnen pro Bunn + Zich pro Bunn (manner = méi effizient, nëmmen am selwechte Bassin vergläichbar).
+    D'Faarwen funktionéieren wéi bei Lafen a Velo: 3-Faarwen-Skala (Min · Median · Max) iwwer d'Kolonn inkl. MIN/MAX-Referenz; séier/wéineg = gréng.
+    Alles gëtt automatesch am Browser zwëschegespäichert. „PDF fir den Trainer“ → am Drockdialog „Als PDF späicheren“ wielen; den Numm gëtt automatesch virgeschloen.</p>
+</div>
+
+<div id="dropAll">FIT-Fichier hei lassgoen</div>
+
+<dialog id="imp" aria-labelledby="impTitle">
+  <h2 id="impTitle">Training importéieren</h2>
+  <p class="hint">FIT-Datei vun der Auer (Coros, Garmin, Suunto … „Schwammen am Bassin“). D'Tool liest all Bunn: Reps, Pausen, Lag, Zich an HR. Mam Plang derbäi gëtt Ein-/Ausschwammen erkannt. De Fichier gëtt hei um Apparat gelies, näischt gëtt eropgelueden. Ëmmer kontrolléieren, ier een iwwerhëlt.</p>
+  <label class="zone" id="zLaps" for="impFileLaps">
+    <b>Resultat vun der Auer</b>
+    <span>FIT-Datei (oder Garmin-ZIP) hei lassgoen oder klicken</span>
+    <span class="got" id="gotLaps"></span>
+    <input type="file" id="impFileLaps">
+  </label>
+  <div id="impStatus" role="status"></div>
+  <div class="row">
+    <label for="impPlan" title="Wat geplangt war. D'Reps ginn an de Bunne vun der Auer gesicht."><b>Plang als Text</b></label>
+    <input id="impPlan" autocorrect="off" spellcheck="false" style="flex:1; min-width:200px" placeholder="z.B. 400m Aschwammen; 10x200m (60s); 200m Ausschwammen">
+  </div>
+  <details>
+    <summary>Schreifweis fir Trainingspläng</summary>
+    <div class="hint" style="margin:6px 0 0">
+      <code>400m Aschwammen</code> Ein-/Ausschwammen (aschw., ausschw., locker, WU, CD …) zielt net als Rep ·
+      <code>10x200m (60s)</code> Reps mat Paus dertëscht ·
+      <code>8x100m @1:50</code> Abgangszäit (Paus = wat iwwreg bleift) ·
+      <code>4x(100m-50m) (20s)</code> Serie ·
+      <code>6x50m Réck</code>, <code>4x100m Pull</code>, <code>8x25m Been</code> Lag / Übung ·
+      <code>p2min</code> eleng op enger Zeil = Paus nom Block.
+      <br>Beispill: <code>400m Aschwammen · 10x200m Kraul (60s) · 200m Ausschwammen</code>
+    </div>
+  </details>
+  <div id="impPrevWrap" hidden>
+    <table id="impPrev">
+      <thead><tr><th style="width:90px">Typ</th><th>Dist. (m)</th><th>Lag</th><th>Zäit</th><th>Zich/Bunn</th><th title="Rep: héchst HR, Paus: déifst HR">HR (Rep max · Paus min)</th><th style="text-align:left">Kommentar</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="actions">
+    <button id="impCancel">Ofbriechen</button>
+    <button id="impApply" class="primary" disabled>Iwwerhuelen</button>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const STORE = 'schwammen-feedback-v1';
+  const PAGE_TITLE = document.title;
+  const RED = [0xF8,0x69,0x6B], YEL = [0xFF,0xEB,0x84], GRN = [0x63,0xBE,0x7B];
+
+  const blankRep = () => ({ dist:'', stroke:'', time:'', spl:'', hr:'', note:'', pTime:'', pHr:'', pNote:'' });
+  const defaults = () => ({
+    name:'', css:'', hrThr:'', date:new Date().toISOString().slice(0,10), clock:'',
+    training:'', pool:'25 m', place:'', material:'', water:'', partner:'',
+    rPaceMin:'', rPaceMax:'', rHrMin:'', rHrMax:'', rPhrMin:'', rPhrMax:'', tenths:false, comment:'', sess:null,
+    reps: Array.from({length:6}, blankRep)
+  });
+
+  let S;
+  try { S = JSON.parse(localStorage.getItem(STORE)) || defaults(); } catch { S = defaults(); }
+  S = Object.assign(defaults(), S);
+
+  // ---------- parsing / formatting ----------
+  const num = s => {
+    if (s === null || s === undefined) return NaN;
+    s = String(s).trim().replace(',', '.');
+    return s === '' ? NaN : Number(s);
+  };
+  // time → seconds. "4:58,2" = m:ss ; "1:02:30" = h:mm:ss ; "45" = s
+  const secs = s => {
+    s = String(s ?? '').trim().replace(/,/g, '.');
+    if (!s) return NaN;
+    const p = s.split(':');
+    if (p.length > 3 || p.some(x => x === '' || isNaN(x))) return NaN;
+    return p.reduce((a, x) => a * 60 + Number(x), 0);
+  };
+  // distance → metres: bare number = metres (swim plans), "1,5km" = 1500
+  const metres = s => {
+    s = String(s ?? '').trim().toLowerCase().replace(',', '.').replace(/\s/g, '');
+    if (!s) return NaN;
+    const m = s.match(/^(\d*\.?\d+)(km|k|m)?$/);
+    if (!m) return NaN;
+    return Number(m[1]) * (m[2] === 'k' || m[2] === 'km' ? 1000 : 1);
+  };
+  const dec = (v, d=1) => v.toFixed(d).replace('.', ',');
+  const rnd = (v, f) => Math.round(Number((v * f).toPrecision(15))) / f;
+  const fmtNum = v => isFinite(v) ? String(rnd(v, 10)).replace('.', ',') : '';
+  const fmtMS = v => {
+    if (!isFinite(v)) return '';
+    const t = rnd(v, 10);
+    if (t >= 3600) return fmtHMS(t, true);
+    const m = Math.floor(t / 60), s = rnd(t - m * 60, 10);
+    return m + ':' + (s < 10 ? '0' : '') + dec(s);
+  };
+  const fmtHMS = (v, tenths = false) => {
+    if (!isFinite(v)) return '';
+    const t = tenths ? rnd(v, 10) : rnd(v, 1);
+    const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = rnd(t % 60, 10);
+    if (tenths) return h + ':' + String(m).padStart(2,'0') + ':' + (s < 10 ? '0' : '') + dec(s);
+    return h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  };
+  const fmtCs = v => {                       // seconds → m:ss,cc (hundredths, like the watch)
+    const t = rnd(v, 100);
+    if (t >= 3600) return fmtHMS(t, true);
+    const m = Math.floor(t / 60), s = rnd(t - m * 60, 100);
+    return m + ':' + (s < 10 ? '0' : '') + dec(s, 2);
+  };
+  // pool length in metres ("25 m", "50", "33,3 m"); NaN for open water
+  const poolLen = () => /fr[äa]i|open|see|ow|meer|weiher/i.test(S.pool || '') ? NaN : metres(String(S.pool || '').replace(/\s*m$/i, ''));
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+  // ---------- Excel-style 3-colour scale (min / 50th percentile / max), as in Lafen / Velo ----------
+  const percentile = (arr, p) => {
+    const a = [...arr].sort((x, y) => x - y), i = (a.length - 1) * p, lo = Math.floor(i);
+    return a[lo] + (a[Math.min(lo + 1, a.length - 1)] - a[lo]) * (i - lo);
+  };
+  const mix = (a, b, t) => a.map((x, i) => Math.round(x + (b[i] - x) * t));
+  function scale(cells, low, high) {
+    const vals = cells.filter(c => isFinite(c.v)).map(c => c.v);
+    cells.forEach(c => c.el.style.background = '');
+    if (!vals.length) return;
+    const mn = Math.min(...vals), mx = Math.max(...vals), md = percentile(vals, .5);
+    cells.forEach(({el, v}) => {
+      if (!isFinite(v)) return;
+      let rgb;
+      if (mx === mn) rgb = YEL;
+      else if (v <= md) rgb = md === mn ? YEL : mix(low, YEL, (v - mn) / (md - mn));
+      else rgb = mx === md ? YEL : mix(YEL, high, (v - md) / (mx - md));
+      el.style.background = `rgb(${rgb.join(',')})`;
+    });
+  }
+
+  // ---------- rows ----------
+  const rowsEl = document.getElementById('rows');
+  function buildRows() {
+    rowsEl.innerHTML = S.reps.map((r, i) => `
+      <tr class="rep" data-i="${i}">
+        <td>${i + 1}</td>
+        <td class="in"><input data-r="${i}" data-f="dist" class="num" inputmode="decimal" list="distList"></td>
+        <td class="in"><input data-r="${i}" data-f="stroke" list="strokeList" autocomplete="off" autocorrect="off" spellcheck="false"></td>
+        <td class="in"><input data-r="${i}" data-f="time" class="num tm" inputmode="decimal"></td>
+        <td class="out" data-c="pace"></td>
+        <td class="in cs" data-c="spl"><input data-r="${i}" data-f="spl" class="num" inputmode="decimal"></td>
+        <td class="out" data-c="swolf"></td>
+        <td class="in cs" data-c="hr"><input data-r="${i}" data-f="hr" class="num" inputmode="numeric"></td>
+        <td></td>
+        <td><input data-r="${i}" data-f="note" autocorrect="off" spellcheck="false"></td>
+        <td class="del"><button data-del="${i}" title="Dës Rep läschen">×</button></td>
+      </tr>
+      <tr class="pause" data-i="${i}">
+        <td>Paus</td><td></td><td></td>
+        <td class="in"><input data-r="${i}" data-f="pTime" class="num tm" inputmode="decimal"></td>
+        <td></td><td></td><td></td><td></td>
+        <td class="in cs" data-c="phr"><input data-r="${i}" data-f="pHr" class="num" inputmode="numeric"></td>
+        <td><input data-r="${i}" data-f="pNote" autocorrect="off" spellcheck="false"></td>
+        <td class="del"></td>
+      </tr>`).join('');
+    rowsEl.querySelectorAll('input[data-f]').forEach(el => el.value = S.reps[el.dataset.r][el.dataset.f] ?? '');
+  }
+
+  // ---------- calculation ----------
+  const $ = id => document.getElementById(id);
+  // reference rows MIN / MAX like the Lafen sheet: pace CSS ± 8 %, HR rep −15/+25, HR pause −30/+10
+  const REFS = [['rPaceMin', 'refPaceMin', 'pMin', true], ['rPaceMax', 'refPaceMax', 'pMax', true],
+                ['rHrMin', 'refHrMin', 'hMin'], ['rHrMax', 'refHrMax', 'hMax'],
+                ['rPhrMin', 'refPauseMin', 'qMin'], ['rPhrMax', 'refPauseMax', 'qMax']];
+  function refValues() {
+    const css = secs(S.css), hrThr = num(S.hrThr);
+    const own = (k, f, time) => String(S[k] ?? '').trim() === '' ? f : time ? secs(S[k]) : num(S[k]);
+    return { pMin: own('rPaceMin', css * 1.08, true), pMax: own('rPaceMax', css * 0.92, true),
+             hMin: own('rHrMin', hrThr - 15), hMax: own('rHrMax', hrThr + 25),
+             qMin: own('rPhrMin', hrThr - 30), qMax: own('rPhrMax', hrThr + 10) };
+  }
+  // pace per 100 m, strokes per length and SWOLF of one rep
+  function repStats(r) {
+    const d = metres(r.dist), t = secs(r.time), spl = num(r.spl), L = poolLen();
+    const pace = isFinite(d) && d > 0 && isFinite(t) ? t / d * 100 : NaN;
+    const swolf = isFinite(L) && isFinite(pace) && isFinite(spl) ? pace * L / 100 + spl : NaN;
+    return { d, t, spl, pace, swolf };
+  }
+  function calc() {
+    // PDF name: YYMMDD Num -- Bassin -- Training (same pattern as Lafen / Velo)
+    let ymd = '';
+    if (S.date) { const [y, m, d] = S.date.split('-'); ymd = y.slice(2) + m + d; }
+    const pdfName = `${ymd} ${S.name} -- ${S.pool} -- ${S.training}`;
+    $('pdfName').textContent = pdfName;
+    $('ptitle').textContent = 'Trainingsfeedback Schwammen · ' + pdfName;
+    document.title = String(S.name || '').trim() || String(S.training || '').trim() ? pdfName.trim() : PAGE_TITLE;
+
+    const css = secs(S.css), hrThr = num(S.hrThr);
+    $('css').classList.toggle('bad', S.css !== '' && !isFinite(css));
+    $('pool').classList.toggle('bad', !!String(S.pool || '').trim() && !isFinite(poolLen()) && !/fr[äa]i|open|see|ow|meer|weiher/i.test(S.pool));
+
+    const R = refValues();
+    REFS.forEach(([k, id, rk, isTime]) => {
+      const el = $(id).querySelector('input'), own = String(S[k] ?? '').trim() !== '', v = R[rk];
+      el.classList.toggle('own', own);
+      el.classList.toggle('bad', own && !isFinite(v));
+      if (el !== document.activeElement) el.value = own ? (isTime ? fmtTime(S[k]) : S[k]) : !isFinite(v) ? '' : isTime ? fmtMS(v) : rnd(v, 1);
+    });
+
+    const paceCells = [{el:$('css'), v:css}, {el:$('refPaceMin'), v:R.pMin}, {el:$('refPaceMax'), v:R.pMax}];
+    const hrCells   = [{el:$('hrThr'), v:hrThr}, {el:$('refHrMin'), v:R.hMin}, {el:$('refHrMax'), v:R.hMax}];
+    const phrCells  = [{el:$('refPauseMin'), v:R.qMin}, {el:$('refPauseMax'), v:R.qMax}];
+    const splCells = [], swCells = [];
+
+    let totD = 0, totT = 0, repT = 0, repD = 0, hrs = [], phrs = [], spls = [], sws = [], pauseT = 0;
+    rowsEl.querySelectorAll('tr').forEach(tr => {
+      const r = S.reps[tr.dataset.i];
+      if (tr.classList.contains('rep')) {
+        const st = repStats(r);
+        tr.querySelector('[data-f=dist]').classList.toggle('bad', r.dist !== '' && !isFinite(st.d));
+        tr.querySelector('[data-f=time]').classList.toggle('bad', r.time !== '' && !isFinite(st.t));
+        tr.querySelector('[data-f=spl]').classList.toggle('bad', r.spl !== '' && !isFinite(st.spl));
+        const pc = tr.querySelector('[data-c=pace]'), sc = tr.querySelector('[data-c=swolf]');
+        pc.textContent = isFinite(st.pace) ? fmtMS(st.pace) : '';
+        sc.textContent = isFinite(st.swolf) ? Math.round(st.swolf) : '';
+        paceCells.push({el:pc, v:st.pace});
+        splCells.push({el:tr.querySelector('[data-c=spl]'), v:st.spl});
+        swCells.push({el:sc, v:st.swolf});
+        hrCells.push({el:tr.querySelector('[data-c=hr]'), v:num(r.hr)});
+        if (isFinite(st.d)) totD += st.d;
+        if (isFinite(st.t)) totT += st.t;
+        if (isFinite(st.d) && isFinite(st.t)) { repD += st.d; repT += st.t; }
+        if (isFinite(num(r.hr))) hrs.push(num(r.hr));
+        if (isFinite(st.spl)) spls.push(st.spl);
+        if (isFinite(st.swolf)) sws.push(st.swolf);
+        tr.classList.toggle('empty', !(r.dist || r.time || r.hr || r.spl || r.note || r.stroke));
+      } else {
+        const t = secs(r.pTime);
+        tr.querySelector('[data-f=pTime]').classList.toggle('bad', r.pTime !== '' && !isFinite(t));
+        phrCells.push({el:tr.querySelector('[data-c=phr]'), v:num(r.pHr)});
+        if (isFinite(t)) { totT += t; pauseT += t; }
+        if (isFinite(num(r.pHr))) phrs.push(num(r.pHr));
+        tr.classList.toggle('empty', !(r.pTime || r.pHr || r.pNote));
+      }
+    });
+
+    // colours: fast pace (few seconds) green, slow red; few strokes / low SWOLF / low HR green
+    scale(paceCells, GRN, RED);
+    scale(splCells, GRN, RED);
+    scale(swCells, GRN, RED);
+    scale(hrCells, GRN, RED);
+    scale(phrCells, GRN, RED);
+
+    $('totDist').textContent = totD ? fmtNum(totD) + ' m' : '';
+    $('totTime').textContent = totT ? fmtHMS(totT) : '';
+    $('totPace').textContent = repD && repT ? fmtMS(repT / repD * 100) : '';
+
+    const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+    const parts = [];
+    if (repD && repT) parts.push(`Ø Pace Reps: <b>${fmtMS(repT / repD * 100)} /100 m</b>`);
+    if (repD && repT && isFinite(css) && css > 0) parts.push(`= <b>${Math.round(css / (repT / repD * 100) * 100)} %</b> vum CSS`);
+    if (spls.length) parts.push(`Ø Zich/Bunn: <b>${dec(avg(spls), 1)}</b>`);
+    if (sws.length) parts.push(`Ø SWOLF: <b>${Math.round(avg(sws))}</b>`);
+    if (hrs.length) parts.push(`Ø Max HR Rep.: <b>${Math.round(avg(hrs))}</b>`);
+    if (phrs.length) parts.push(`Ø Min HR Paus: <b>${Math.round(avg(phrs))}</b>`);
+    if (repT) parts.push(`Belaaschtungszäit: <b>${fmtHMS(repT)}</b>`);
+    if (repT && pauseT) parts.push(`Schwamm : Paus = <b>${dec(repT / pauseT, 1)} : 1</b>`);
+    if (S.sess && S.sess.d) parts.push(`Ganzen Training (Auer): <b>${fmtNum(S.sess.d)} m · ${fmtHMS(S.sess.t)}</b>`);
+    $('summary').innerHTML = parts.join('');
+    $('commentPrint').textContent = S.comment;
+
+    try { localStorage.setItem(STORE, JSON.stringify(S)); } catch {}
+  }
+
+  // ---------- binding ----------
+  function fillMeta() {
+    document.querySelectorAll('[data-k]').forEach(el => { el.value = S[el.dataset.k] ?? ''; });
+    $('tenths').checked = !!S.tenths;
+  }
+  $('tenths').onchange = e => { S.tenths = e.target.checked; calc(); showTimes(); };
+  // time fields are shown formatted when not being edited; the typed value is kept unrounded for all calculations
+  const rawOf = el => el.dataset.k ? S[el.dataset.k] : S.reps[el.dataset.r][el.dataset.f];
+  const fmtTime = raw => {
+    const v = secs(raw);
+    if (!isFinite(v)) return raw;
+    if (S.tenths) return fmtMS(v);
+    const frac = (String(raw).match(/[.,](\d+)$/) || ['', ''])[1];
+    if (frac.length < 2 || v >= 3600) return fmtMS(v);
+    return fmtCs(v);
+  };
+  const showTimes = () => document.querySelectorAll('input.tm').forEach(el => {
+    if (el !== document.activeElement) el.value = fmtTime(rawOf(el) ?? '');
+  });
+  document.addEventListener('focusin', e => { if (e.target.classList?.contains('tm')) e.target.value = rawOf(e.target) ?? ''; });
+  document.addEventListener('focusout', () => setTimeout(showTimes));
+
+  document.addEventListener('input', e => {
+    const el = e.target;
+    if (el.dataset.k) S[el.dataset.k] = el.value;
+    else if (el.dataset.f) S.reps[el.dataset.r][el.dataset.f] = el.value;
+    else return;
+    calc();
+  });
+  rowsEl.addEventListener('click', e => {
+    const i = e.target.dataset.del;
+    if (i === undefined) return;
+    S.reps.splice(Number(i), 1);
+    if (!S.reps.length) S.reps.push(blankRep());
+    buildRows(); calc(); showTimes();
+  });
+  // Enter → next input (quick entry on a phone/keyboard)
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+    if (e.target.id === 'impPlan') { e.preventDefault(); combine(); return; }
+    if (!e.target.closest('.sheet')) return;
+    e.preventDefault();
+    const all = [...document.querySelectorAll('.sheet input:not([type=file])')];
+    const n = all[all.indexOf(e.target) + 1];
+    if (n) n.focus();
+  });
+
+  // CSS test: (T400 − T200) / 2 = seconds per 100 m
+  const cssTest = () => {
+    const a = secs($('t400').value), b = secs($('t200').value);
+    const v = isFinite(a) && isFinite(b) && a > b ? (a - b) / 2 : NaN;
+    $('cssCalc').innerHTML = isFinite(v) ? `→ CSS <b>${fmtMS(v)}</b> /100 m` : '';
+    $('cssTake').disabled = !isFinite(v);
+    return v;
+  };
+  $('t400').oninput = $('t200').oninput = cssTest;
+  $('cssTake').onclick = () => { const v = cssTest(); if (isFinite(v)) { S.css = fmtMS(v); fillMeta(); calc(); showTimes(); } };
+
+  $('addRep').onclick = () => { S.reps.push(blankRep()); buildRows(); calc(); showTimes(); };
+  $('remRep').onclick = () => { if (S.reps.length > 1) { S.reps.pop(); buildRows(); calc(); showTimes(); } };
+  const hasData = () => S.reps.some(r => r.time || r.hr || r.pTime || r.pHr || r.spl);
+  $('fromTraining').onclick = () => {
+    const res = parsePlan(S.training);
+    if (!res.entries.some(e => e.type === 'rep')) { alert('Am Feld „Training“ keen Muster wéi „10x200m (60s)“ fonnt.'); return; }
+    if (hasData() && !confirm('Et sinn schonn Donnéeën an de Reps. Iwwerschreiwen?')) return;
+    applyEntries(res.entries, null);
+  };
+
+  $('btnNew').onclick = () => {
+    if (!confirm('Neien Training ufänken? Num, CSS, HR Schwell, MIN/MAX-Wäerter, Bassin a Plaz bleiwen.')) return;
+    const keep = {name:S.name, css:S.css, hrThr:S.hrThr, pool:S.pool, place:S.place,
+                  rPaceMin:S.rPaceMin, rPaceMax:S.rPaceMax, rHrMin:S.rHrMin, rHrMax:S.rHrMax, rPhrMin:S.rPhrMin, rPhrMax:S.rPhrMax, tenths:S.tenths};
+    S = Object.assign(defaults(), keep);
+    fillMeta(); buildRows(); calc(); showTimes();
+  };
+  $('btnSave').onclick = () => {
+    const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = ($('pdfName').textContent || 'training') + '.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  $('btnLoad').onclick = () => $('fileIn').click();
+  $('fileIn').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { S = Object.assign(defaults(), JSON.parse(await f.text())); fillMeta(); buildRows(); calc(); showTimes(); }
+    catch { alert('Fichier konnt net gelies ginn.'); }
+    e.target.value = '';
+  };
+  // anonymous click counter (only a number per button); live site only
+  const countUse = k => { if (location.hostname === 'pugu-prog.github.io') fetch('https://abacus.jasoncameron.dev/hit/schwammen-sauerbeen/' + k, { keepalive: true }).catch(() => {}); };
+  $('btnPdf').onclick = () => {
+    countUse('pdf');
+    if (window.webkit?.messageHandlers?.sauerbeenPrint) window.webkit.messageHandlers.sauerbeenPrint.postMessage(document.title);
+    else if (window.SauerBeenApp?.print) window.SauerBeenApp.print(document.title);
+    else window.print();
+  };
+
+  // ================= Import =================
+  const E = (type, o = {}) => Object.assign({ type, dist: '', stroke: '', time: '', spl: '', hr: '', note: '', hrs: [] }, o);
+
+  // ---------- swim strokes ----------
+  // FIT swim_stroke: 0 freestyle, 1 backstroke, 2 breaststroke, 3 butterfly, 4 drill, 5 mixed, 6 IM
+  const FIT_STROKE = ['Kraul', 'Réck', 'Broscht', 'Delfin', 'Technik', 'Gemëscht', 'Lagen'];
+  const STROKE_WORDS = [[/\b(kraul|crawl|krol|free(style)?|fr|fs)\b/i, 'Kraul'], [/\b(r[ée]ck|r[üu]cken|back(stroke)?|rs|dos)\b/i, 'Réck'],
+    [/\b(broscht|brust|breast(stroke)?|bs|brasse)\b/i, 'Broscht'], [/\b(delfin|delphin|schmetterling|fly|butterfly|papillon)\b/i, 'Delfin'],
+    [/\b(lagen|im|4\s*lagen|medley|4n)\b/i, 'Lagen'], [/\b(been|bein|beine|kick|brett|jambes)\b/i, 'Been'], [/\b(technik|drill|[üu]bung|education)\b/i, 'Technik']];
+  const strokeOf = t => (STROKE_WORDS.find(([re]) => re.test(t || '')) || [])[1] || '';
+
+  // ---------- plan text → entries ----------
+  const WARM = /aschw|ausschw|einschw|ein\s*schw|aus\s*schw|locker|easy|warm|cool|lues|r[ée]cup|\b(wu|cd|es|as|ee|ea)\b/i;
+  const PAUSE_PREFIX = /^(p|r|rec|rest|paus[e]?|break)\s*[:.]?\s*(?=\d)/i;
+  const parseDur = t => {
+    t = String(t).trim().toLowerCase().replace(',', '.');
+    let m = t.match(/^(\d+):(\d{2}(?:\.\d+)?)$/); if (m) return +m[1] * 60 + +m[2];
+    m = t.match(/^(\d*\.?\d+)\s*(min|mn|')$/); if (m) return +m[1] * 60;
+    m = t.match(/^(\d*\.?\d+)\s*(s|sec|sek|''|")$/); if (m) return +m[1];
+    return NaN;
+  };
+  const parseDistTok = t => { const m = String(t).trim().toLowerCase().replace(',', '.').match(/^(\d*\.?\d+)\s*(km|m)?$/); return m ? +m[1] * (m[2] === 'km' ? 1000 : 1) : NaN; };
+  const tokItem = t => {
+    const d = parseDur(t); if (isFinite(d)) return { time: d };
+    const m = parseDistTok(t); if (isFinite(m)) return { dist: m };
+    return null;
+  };
+  // "(60s)", "(1min Paus)", "p30s", "P: 20s", "@1:50" (send-off) in the rest of a line
+  function restOf(rest) {
+    let pause = NaN, sendoff = NaN;
+    rest = rest.replace(/@\s*(\d+:\d{2}|\d+\s*(?:s|sec|sek|min|''|"|'))/i, (a, t) => { sendoff = parseDur(t); return ' '; })
+               .replace(/\b(?:op|abgang|abg\.?|start)\s+(\d+:\d{2})/i, (a, t) => { sendoff = parseDur(t); return ' '; })
+               .replace(/\(([^)]*)\)/g, (a, inner) => {
+                 const tok = inner.replace(/paus[e]?|rest|rec|p\b|:/gi, ' ').trim().split(/\s+/)[0];
+                 const d = parseDur(tok); if (isFinite(d)) { pause = d; return ' '; } return a;
+               })
+               .replace(/\b(?:p|paus[e]?|rest)\s*[:.]?\s*(\d+:\d{2}|\d+\s*(?:s|sec|sek|min|''|"|'))/i, (a, t) => { pause = parseDur(t); return ' '; });
+    return { pause, sendoff, note: rest.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim() };
+  }
+  const clean = raw => raw.replace(/\s+/g, ' ').trim();
+  function parsePlan(text) {
+    const out = [], used = [], unread = [];
+    const lines = String(text).split(/\n|;|·|\s\+\s/).map(l => l.replace(/^[\s•\-–*]+/, '').trim()).filter(Boolean);
+    const lastRep = () => { for (let i = out.length - 1; i >= 0; i--) if (out[i].type === 'rep') return i; return -1; };
+    const addPause = sec => {
+      const i = lastRep(); if (i < 0) return;
+      const next = out[i + 1];
+      if (next && next.type === 'pause') next.time = fmtMS(sec);
+      else out.splice(i + 1, 0, E('pause', { time: fmtMS(sec) }));
+    };
+    for (const raw of lines) {
+      const l = raw.toLowerCase().replace(/×/g, 'x');
+      const pp = l.match(PAUSE_PREFIX);
+      if (pp) { const d = parseDur(l.slice(pp[0].length).replace(/\(.*\)/, '').replace(/paus[e]?/, '').trim()); if (isFinite(d)) { addPause(d); continue; } }
+      let m = l.match(/^(\d+)\s*x\s*(.+)$/);
+      if (m) {
+        const n = +m[1]; let rest = m[2].trim(), items;
+        if (rest.startsWith('(')) {
+          const j = rest.indexOf(')'); if (j < 0) { unread.push(raw); continue; }
+          items = rest.slice(1, j).split(/\s*[-–\/+,]\s*/); rest = rest.slice(j + 1);
+        } else {
+          const t = rest.match(/^([\d.,]+\s*(?:km|m|min|s|sec|sek|''|'|")?)(?![a-z\d])/);
+          if (!t) { unread.push(raw); continue; }
+          items = [t[1]]; rest = rest.slice(t[0].length);
+        }
+        const its = items.map(tokItem);
+        if (!its.length || its.some(x => !x) || n < 1 || n > 100) { unread.push(raw); continue; }
+        const ro = restOf(rest), stroke = strokeOf(ro.note);
+        if (stroke && !/\s/.test(ro.note)) ro.note = '';   // "Réck" alone → only the Lag column
+        const note = [ro.note,isFinite(ro.sendoff) ? 'Abgang ' + fmtMS(ro.sendoff).replace(/,0$/, '') : ''].filter(Boolean).join(' · ');
+        for (let k = 0; k < n; k++) its.forEach((it, idx) => {
+          out.push(E('rep', { dist: it.dist ? fmtNum(it.dist) : '', time: it.time ? fmtMS(it.time) : '', stroke, note, sendoff: ro.sendoff }));
+          const isLast = k === n - 1 && idx === its.length - 1;
+          if (!isLast || isFinite(ro.pause)) out.push(E('pause', { time: isFinite(ro.pause) ? fmtMS(ro.pause) : '' }));
+        });
+        used.push(clean(raw).replace(/\s*\((\d[^)]*)\)/, ' ($1)'));
+        continue;
+      }
+      m = l.match(/^([\d.,]+\s*(?:km|m|min|s|sec|sek|''|'|")?)(?![a-z\d])\s*(.*)$/);
+      if (!m) { if (/\d/.test(l)) unread.push(raw); continue; }
+      const it = tokItem(m[1]); if (!it) { unread.push(raw); continue; }
+      const ro = restOf(m[2]);
+      if (it.time && !ro.note) { addPause(it.time); continue; }             // "2min" alone = pause after the block
+      // warm-up before the first rep, cool-down after the last: no rep, but mergePlan skips that many metres
+      if (WARM.test(ro.note)) { out.push(E('warm', { dist: it.dist ? fmtNum(it.dist) : '', note: ro.note, before: lastRep() < 0 })); continue; }
+      out.push(E('rep', { dist: it.dist ? fmtNum(it.dist) : '', time: it.time ? fmtMS(it.time) : '', stroke: strokeOf(ro.note), note: ro.note }));
+      if (isFinite(ro.pause)) out.push(E('pause', { time: fmtMS(ro.pause) }));
+      used.push(clean(raw));
+    }
+    while (out.length && out[out.length - 1].type === 'pause') out.pop();
+    return { entries: out.filter(e => e.type !== 'warm'), warm: out.filter(e => e.type === 'warm'), summary: used.join(' + '), unread };
+  }
+
+  // ---------- FIT ----------
+  // Minimal FIT decoder: session (18), lap (19), record (20), event (21), activity (34), length (101)
+  const FIT_EPOCH = 631065600;                         // 1989-12-31T00:00:00Z
+  function parseFIT(buf) {
+    const dv = new DataView(buf), laps = [], recs = [], lens = [], meta = {};
+    let off = 0;
+    while (off + 12 <= buf.byteLength) {
+      const hs = dv.getUint8(off), size = dv.getUint32(off + 4, true);
+      if (String.fromCharCode(...new Uint8Array(buf, off + 8, 4)) !== '.FIT') { if (!laps.length) throw new Error('Keen FIT-Fichier.'); break; }
+      let p = off + hs; const end = p + size, defs = {}; let lastTs = 0;
+      const read = (q, sz, little) => sz === 1 ? dv.getUint8(q) : sz === 2 ? dv.getUint16(q, little) : sz === 4 ? dv.getUint32(q, little) : null;
+      const INVALID = { 1: 0xFF, 2: 0xFFFF, 4: 0xFFFFFFFF };
+      while (p < end) {
+        const h = dv.getUint8(p++);
+        if (!(h & 0x80) && (h & 0x40)) {                     // definition message
+          const local = h & 0x0F, dev = h & 0x20;
+          p++; const little = dv.getUint8(p++) === 0, g = dv.getUint16(p, little); p += 2;
+          const nf = dv.getUint8(p++), fields = [];
+          for (let i = 0; i < nf; i++, p += 3) fields.push({ n: dv.getUint8(p), sz: dv.getUint8(p + 1), bt: dv.getUint8(p + 2) & 0x1F });
+          let devSize = 0;
+          if (dev) { const nd = dv.getUint8(p++); for (let i = 0; i < nd; i++, p += 3) devSize += dv.getUint8(p + 1); }
+          defs[local] = { g, little, fields, devSize };
+          continue;
+        }
+        let local, ts = null;
+        if (h & 0x80) {                                      // compressed timestamp header
+          local = (h >> 5) & 3; const o = h & 0x1F;
+          ts = (lastTs & ~0x1F) + o; if (o < (lastTs & 0x1F)) ts += 0x20; lastTs = ts;
+        } else local = h & 0x0F;
+        const def = defs[local]; if (!def) throw new Error('FIT-Fichier ass beschiedegt.');
+        const v = {};
+        for (const fd of def.fields) {
+          let x = read(p, fd.sz, def.little);
+          const signed = fd.bt === 1 || fd.bt === 3 || fd.bt === 5;
+          if (x != null && signed) {
+            const half = 2 ** (8 * fd.sz - 1);
+            x = x === half - 1 ? null : x >= half ? x - 2 * half : x;
+          } else if (x === INVALID[fd.sz]) x = null;
+          if (x != null) v[fd.n] = x;
+          p += fd.sz;
+        }
+        p += def.devSize;
+        if (v[253] != null) { lastTs = v[253]; ts = v[253]; }
+        if (def.g === 20 && ts != null && v[3] != null) recs.push({ ts, hr: v[3] });
+        if (def.g === 18) {
+          if (v[2] != null) meta.start ??= v[2];
+          if (v[44] != null) { meta.pool = v[44] / 100; meta.poolYd = v[46] === 1; }
+          if (v[57] != null) meta.temp ??= v[57];
+          if (v[9] != null) meta.dist = v[9] / 100;
+          if (v[8] != null) meta.time = v[8] / 1000;
+          if (v[6] != null) meta.sub = v[6];
+          if (v[5] != null) meta.sport = v[5];
+        }
+        if (def.g === 34 && v[5] != null && v[253] != null) meta.tzOffset = v[5] - v[253];
+        // length: start (2), elapsed (3), timer (4), strokes (5), stroke (7), type (12: 0 idle, 1 active)
+        if (def.g === 101 && v[2] != null) lens.push({ a: v[2], t: (v[4] ?? v[3] ?? 0) / 1000, el: (v[3] ?? v[4] ?? 0) / 1000,
+                                                         strokes: v[5], stroke: v[7], active: v[12] !== 0 });
+        if (def.g === 19) { const t0 = v[253] ?? ts, el = v[7] ?? v[8];
+          laps.push({ start: v[2], end: v[2] != null && el != null && !(t0 > v[2]) ? v[2] + el / 1000 : t0, t: (v[8] ?? v[7]) / 1000,
+                      d: v[9] != null ? v[9] / 100 : NaN, hrAvg: v[15], hrMax: v[16], hrMin: v[63], stroke: v[38],
+                      nLen: v[32], firstLen: v[35], cycles: v[10] }); }
+      }
+      off = end + 2;
+    }
+    if (!laps.length && !lens.length) throw new Error('Am FIT-Fichier si keng Runden.');
+    meta.start ??= laps[0]?.start ?? lens[0]?.a;
+    if (meta.sport != null && meta.sport !== 5) meta.notSwim = true;
+    return { laps, recs, lens, meta };
+  }
+  const hrRange = (recs, from, to) => {
+    let mn = null, mx = null;
+    for (const r of recs) if (r.ts >= from && r.ts <= to && r.hr > 0) { mn = mn == null ? r.hr : Math.min(mn, r.hr); mx = mx == null ? r.hr : Math.max(mx, r.hr); }
+    return { mn, mx };
+  };
+  const mode = a => { const c = {}; a.forEach(x => c[x] = (c[x] || 0) + 1); return Object.keys(c).sort((x, y) => c[y] - c[x])[0]; };
+
+  // pool swim → entries: every run of active lengths is one swim (it ends at a lap press, an idle length or a
+  // standstill of ≥ 10 s at the wall); the time between two swims is the pause (wall clock, also when the watch was stopped)
+  function swimEntries(fit) {
+    const { laps, recs, lens, meta } = fit, L = meta.pool || 25;
+    const lapIdx = lens.map(() => -1);
+    laps.forEach((l, k) => { if (l.firstLen != null && l.nLen > 0) for (let j = l.firstLen; j < l.firstLen + l.nLen && j < lens.length; j++) lapIdx[j] = k; });
+    const swims = []; let cur = null;
+    lens.forEach((len, j) => {
+      const endTs = len.a + len.el;
+      if (!len.active) { cur = null; return; }
+      if (cur && (lapIdx[j] !== cur.lap || len.a - cur.end >= 10)) cur = null;
+      if (!cur) swims.push(cur = { lap: lapIdx[j], a: len.a, end: endTs, t: 0, n: 0, strokes: 0, sn: 0, kinds: [] });
+      cur.end = endTs; cur.t += len.t; cur.n++;
+      if (len.strokes != null) { cur.strokes += len.strokes; cur.sn++; }
+      if (len.stroke != null) cur.kinds.push(len.stroke);
+    });
+    const out = [];
+    swims.forEach((s, i) => {
+      const hr = hrRange(recs, s.a, s.end);
+      const kind = s.kinds.length ? (new Set(s.kinds).size > 1 ? 5 : +mode(s.kinds)) : laps[s.lap]?.stroke;
+      if (i > 0) {
+        const prev = swims[i - 1], gap = s.a - prev.end;
+        if (gap >= 1) {
+          // lowest HR of the rest; optical HR lags, so the first seconds of the next swim are included
+          const ph = hrRange(recs, prev.end, s.a + 5);
+          out.push(E('pause', { time: fmtCs(gap), hr: ph.mn != null ? String(ph.mn) : '', hrs: ph.mn != null ? [ph.mn] : [] }));
+        }
+      }
+      const spl = s.sn ? s.strokes / s.sn : NaN;
+      out.push(E('rep', { dist: String(Math.round(s.n * L * 10) / 10), stroke: FIT_STROKE[kind] || '', time: fmtCs(s.t),
+        spl: isFinite(spl) ? dec(spl, 1).replace(/,0$/, '') : '', hr: hr.mx != null ? String(hr.mx) : '', hrs: hr.mx != null ? [hr.mx] : [], lens: s.n }));
+    });
+    return out;
+  }
+  // open water / no lengths: the laps, hard (fast) group = reps
+  function lapEntries(fit) {
+    const { laps, recs } = fit;
+    const sp = l => l.d > 0 && l.t > 0 ? l.d / l.t : 0;
+    const xs = laps.filter(l => sp(l) > 0).map(sp).sort((a, b) => b - a);
+    let thr = 0;
+    for (let i = 1; i < xs.length; i++) if (xs[i - 1] / xs[i] > 1.25) { thr = (xs[i] + xs[i - 1]) / 2; break; }
+    return laps.map(l => {
+      const type = sp(l) > 0 && sp(l) >= thr ? 'rep' : 'pause';
+      const hr = l.start != null ? hrRange(recs, l.start, l.end) : { mn: l.hrMin, mx: l.hrMax };
+      const h = type === 'rep' ? (hr.mx ?? l.hrMax) : (hr.mn ?? l.hrMin);
+      return E(type, { dist: isFinite(l.d) && l.d > 0 ? String(Math.round(l.d)) : '', time: fmtCs(l.t), stroke: FIT_STROKE[l.stroke] || '',
+        hr: h != null ? String(h) : '', hrs: h != null ? [h] : [] });
+    });
+  }
+
+  // Garmin Connect "Export Original" = ZIP with one .fit inside
+  async function unzipFirst(buf, re) {
+    const dv = new DataView(buf);
+    let e = buf.byteLength - 22;
+    while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+    if (e < 0) throw new Error('ZIP-Fichier konnt net gelies ginn.');
+    let p = dv.getUint32(e + 16, true);
+    const n = dv.getUint16(e + 10, true);
+    for (let i = 0; i < n; i++) {
+      const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true);
+      const nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true);
+      const lho = dv.getUint32(p + 42, true);
+      const name = new TextDecoder().decode(new Uint8Array(buf, p + 46, nl));
+      p += 46 + nl + xl + cl;
+      if (!re.test(name)) continue;
+      const start = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true);
+      const data = new Uint8Array(buf, start, csize);
+      if (method === 0) return data.slice().buffer;
+      const out = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      return new Response(out).arrayBuffer();
+    }
+    throw new Error('Am ZIP ass keen FIT-Fichier.');
+  }
+
+  // ---------- activity meta: date, time of day, pool, water temperature ----------
+  const metaFields = m => {
+    const o = {};
+    if (m.start != null) {
+      const utc = (m.start + FIT_EPOCH) * 1000;
+      const d = m.tzOffset != null ? new Date(utc + m.tzOffset * 1000) : new Date(utc - new Date(utc).getTimezoneOffset() * 60000);
+      o.date = d.toISOString().slice(0, 10); o.clock = d.toISOString().slice(11, 16);
+    }
+    return o;
+  };
+  let impMeta = null;
+  function takeMeta(m) {
+    const mf = metaFields(m);
+    if (mf.date) { S.date = mf.date; S.clock = mf.clock; }
+    if (m.pool) S.pool = m.poolYd ? fmtNum(m.pool) + ' yd' : fmtNum(m.pool) + ' m';
+    else if (m.sub === 18) S.pool = 'Fräiwaasser';        // sub_sport open_water
+    S.water = m.temp != null ? String(m.temp) : '';
+    S.sess = m.dist ? { d: m.dist, t: m.time } : null;
+    fillMeta(); calc();
+  }
+
+  // ---------- entries → sheet ----------
+  function applyEntries(list, training) {
+    const reps = [];
+    list.forEach(e => {
+      if (e.type === 'rep') reps.push(Object.assign(blankRep(), { dist: e.dist, stroke: e.stroke, time: e.time, spl: e.spl, hr: e.hr, note: e.note }));
+      else if (e.type === 'pause' && reps.length) {
+        const r = reps[reps.length - 1];
+        if (r.pTime || r.pHr) {          // two pauses in a row (a swim set to "ignoréieren" in between) → one pause
+          const a = secs(r.pTime), b = secs(e.time);
+          if (isFinite(b)) r.pTime = fmtCs((isFinite(a) ? a : 0) + b);
+          if (e.hr && (!r.pHr || +e.hr < +r.pHr)) r.pHr = e.hr;
+        } else Object.assign(r, { pTime: e.time, pHr: e.hr, pNote: e.note });
+      }
+    });
+    if (!reps.length) return false;
+    S.reps = reps;
+    if (training) S.training = training;
+    fillMeta(); buildRows(); calc(); showTimes();
+    return true;
+  }
+
+  // ---------- dialog ----------
+  const dlg = $('imp');
+  let entries = [], lapSlot = null, lapInfo = '', lapName = '', planSummary = '';
+  const status = (t, err = false) => { $('impStatus').textContent = t; $('impStatus').classList.toggle('err', err); };
+  function renderPreview() {
+    const tb = $('impPrev').tBodies[0];
+    tb.innerHTML = entries.map((e, i) => `
+      <tr class="t-${e.type}" data-i="${i}">
+        <td><select data-p="type">
+          <option value="rep"${e.type === 'rep' ? ' selected' : ''}>Rep</option>
+          <option value="pause"${e.type === 'pause' ? ' selected' : ''}>Paus</option>
+          <option value="skip"${e.type === 'skip' ? ' selected' : ''}>– ignoréieren</option></select></td>
+        <td class="in"><input data-p="dist" class="num"></td>
+        <td class="in"><input data-p="stroke" list="strokeList"></td>
+        <td class="in"><input data-p="time" class="num"></td>
+        <td class="in"><input data-p="spl" class="num"></td>
+        <td class="in"><input data-p="hr" class="num" inputmode="numeric"></td>
+        <td><input data-p="note" autocorrect="off" spellcheck="false"></td>
+      </tr>`).join('');
+    tb.querySelectorAll('input[data-p]').forEach(el => el.value = entries[el.closest('tr').dataset.i][el.dataset.p] ?? '');
+    $('impPrevWrap').hidden = !entries.length;
+    const n = entries.filter(e => e.type === 'rep').length;
+    $('impApply').disabled = !n;
+    $('impApply').textContent = n ? `${n} Rep${n > 1 ? 's' : ''} iwwerhuelen` : 'Iwwerhuelen';
+  }
+  $('impPrev').addEventListener('input', e => {
+    const tr = e.target.closest('tr'), ent = entries[tr.dataset.i], p = e.target.dataset.p;
+    if (p !== 'type') { ent[p] = e.target.value; return; }
+    ent.type = e.target.value;
+    renderPreview();
+  });
+  // plan reps → swims: each planned rep takes the next swim of that distance (± 10 %); swims before, in between
+  // that do not fit (warm-up, cool-down, an extra length) are ignored, their time becomes part of the pause
+  function mergePlan(swims, plan, warm = []) {
+    const steps = plan.filter(e => e.type === 'rep').map(e => ({ d: metres(e.dist), t: secs(e.time), note: e.note, stroke: e.stroke, sendoff: e.sendoff }));
+    const out = swims.map(e => Object.assign({}, e, { type: e.type === 'rep' ? 'skip' : e.type }));
+    // planned warm-up ("400m Aschwammen"): the first swims up to that distance are not searched
+    const wu = warm.filter(w => w.before).reduce((s, w) => s + (metres(w.dist) || 0), 0);
+    let k = 0, found = 0;
+    for (let i = 0, sum = 0; wu && i < swims.length; i++) {
+      if (swims[i].type !== 'rep') continue;
+      sum += metres(swims[i].dist) || 0;
+      if (sum > wu * 1.1) break;
+      k = i + 1;
+      if (sum >= wu * 0.9) break;
+    }
+    for (const st of steps) {
+      let hit = -1;
+      for (let i = k; i < out.length; i++) {
+        if (swims[i].type !== 'rep') continue;
+        const d = metres(swims[i].dist), t = secs(swims[i].time);
+        const ok = isFinite(st.d) ? Math.abs(d - st.d) / st.d <= 0.1 : isFinite(st.t) && Math.abs(t - st.t) / st.t <= 0.15;
+        if (ok) { hit = i; break; }
+      }
+      if (hit < 0) break;
+      const o = out[hit]; o.type = 'rep'; found++;
+      if (st.stroke) o.stroke = st.stroke;
+      o.note = st.note || '';
+      k = hit + 1;
+    }
+    // ignored swims between the first and the last rep count as pause (e.g. an easy 50 m between two sets)
+    const first = out.findIndex(e => e.type === 'rep'), last = out.map(e => e.type).lastIndexOf('rep');
+    out.forEach((e, i) => {
+      if (i < first || i > last) e.type = 'skip';
+      else if (e.type === 'skip') { e.type = 'pause'; e.note = `${e.dist} m ${e.stroke || ''}`.trim() + ' locker'; e.hr = ''; }
+    });
+    return { found, entries: out };
+  }
+  const unreadText = u => u.length ? ` Net verstan: „${u.join('“, „')}“ – Plang verbesseren.` : '';
+  function combine() {
+    const plan = parsePlan($('impPlan').value);
+    const nPlan = plan.entries.filter(e => e.type === 'rep').length;
+    planSummary = plan.summary;
+    let msg = '', err = plan.unread.length > 0;
+    if (lapSlot) {
+      const nAuto = lapSlot.filter(e => e.type === 'rep').length;
+      const auto = `${lapName}: ${nAuto} Schwämm-Stécker`;
+      if (nPlan) {
+        const m = mergePlan(lapSlot, plan.entries, plan.warm);
+        if (m.found) {
+          entries = m.entries;
+          msg = `${auto}. Plang „${plan.summary}“: ${m.found < nPlan ? `${m.found} vun ${nPlan}` : nPlan} Reps fonnt` +
+                (nAuto > m.found ? `, ${nAuto - m.found} Stécker (Ein-/Ausschwammen …) ignoréiert` : '') + '.';
+        } else { entries = lapSlot.map(e => Object.assign({}, e)); err = true;
+                 msg = `${auto}. De Plang „${plan.summary}“ passt net op d'Distanzen, dofir alles als Rep. Plang verbesseren oder eidel maachen.`; }
+      } else {
+        entries = lapSlot.map(e => Object.assign({}, e));
+        msg = `${auto}, all als Rep. Ein-/Ausschwammen hei op „ignoréieren“ setzen, oder de Plang derbäi schreiwen (z.B. „400m Aschwammen; 10x200m (60s)“).`;
+      }
+      msg += lapInfo;
+    } else if (nPlan) {
+      entries = plan.entries;
+      msg = `Plang: ${plan.summary} (${nPlan} Reps). Fir Zäiten an HR kann een elo nach d'FIT-Datei derbäi zéien.`;
+    } else {
+      entries = [];
+      if ($('impPlan').value.trim()) { msg = 'Keng Reps am Plang fonnt.'; err = true; }
+    }
+    if (msg || err) status(msg + unreadText(plan.unread) + (entries.length ? ' W.e.gl. kontrolléieren.' : ''), err);
+    $('gotLaps').textContent = lapSlot ? `✓ ${lapName}` : '';
+    $('zLaps').classList.toggle('has', !!lapSlot);
+    renderPreview();
+  }
+  let planTimer = 0;
+  $('impPlan').addEventListener('input', () => { clearTimeout(planTimer); planTimer = setTimeout(combine, 500); });
+  $('impCancel').onclick = () => dlg.close();
+  $('impApply').onclick = () => {
+    if (hasData() && !confirm('Et sinn schonn Donnéeën an de Reps. Iwwerschreiwen?')) return;
+    if (impMeta) takeMeta(impMeta);
+    const pv = $('impPlan').value.trim(), tr = String(S.training || '').trim();
+    if (applyEntries(entries, pv && pv !== tr ? planSummary : null)) dlg.close();
+  };
+  const hasXPlan = t => /\d\s*[x×]\s*[\d(]/i.test(t || '');
+  $('btnImport').onclick = () => {
+    entries = []; impMeta = null; lapSlot = null; lapInfo = ''; lapName = ''; status('');
+    $('gotLaps').textContent = ''; $('zLaps').classList.remove('has');
+    $('impPlan').value = hasXPlan(S.training) ? S.training.replace(/\s+\+\s+/g, '; ') : '';
+    renderPreview();
+    $('impFileLaps').value = '';
+    dlg.showModal();
+  };
+
+  async function importFile(file) {
+    try {
+      $('impApply').disabled = true;
+      let buf = await file.arrayBuffer();
+      const b = new Uint8Array(buf.slice(0, 12));
+      if (b[0] === 0x50 && b[1] === 0x4B) buf = await unzipFirst(buf, /\.fit$/i);
+      else if (String.fromCharCode(b[8], b[9], b[10], b[11]) !== '.FIT') throw new Error('Dat ass keng FIT-Datei. W.e.gl. d\'FIT-Datei vun der Auer huelen (Coros-App: Aktivitéit → Deelen → FIT; Garmin Connect: Export Original).');
+      status('Aktivitéit gëtt gelies …');
+      const fit = parseFIT(buf);
+      impMeta = fit.meta;
+      lapSlot = fit.lens.some(l => l.active) ? swimEntries(fit) : lapEntries(fit);
+      lapName = file.name || 'Auer-Fichier';
+      const mf = metaFields(fit.meta), parts = [];
+      if (mf.date) parts.push(`${mf.date.split('-').reverse().join('.')} ${mf.clock}`);
+      if (fit.meta.pool) parts.push(`Bassin ${fmtNum(fit.meta.pool)} ${fit.meta.poolYd ? 'yd' : 'm'}`);
+      if (fit.meta.dist) parts.push(`${fmtNum(fit.meta.dist)} m an ${fmtHMS(fit.meta.time)}`);
+      if (fit.meta.temp != null) parts.push(`Auer-Sensor ${fit.meta.temp} °C`);
+      lapInfo = parts.length ? ' ' + parts.join(' · ') + '.' : '';
+      if (fit.meta.notSwim) lapInfo += ' Opgepasst: dës Aktivitéit ass net als Schwammen gespäichert.';
+      combine();
+    } catch (err) { status(err.message || String(err), true); }
+  }
+  const openWith = async files => {
+    if (!dlg.open) $('btnImport').onclick();
+    for (const f of files) await importFile(f);
+  };
+  $('impFileLaps').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; if (fs.length) openWith(fs); };
+  const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
+  let dragDepth = 0;
+  document.addEventListener('dragenter', e => { if (hasFiles(e)) { dragDepth++; document.body.classList.add('dragging'); } });
+  document.addEventListener('dragleave', e => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragging'); } });
+  document.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+  document.addEventListener('drop', e => {
+    if (!hasFiles(e)) return;
+    e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragging');
+    const fs = [...e.dataTransfer.files]; if (fs.length) openWith(fs);
+  });
+
+  window.schwammenImport = { importFile, parsePlan, parseFIT, swimEntries, mergePlan, combine };   // for testing
+  // for the SauerBeen app: a FIT/ZIP file shared to the app is handed over as base64 → import dialog
+  window.SauerBeen = {
+    importFile(base64, name = 'aktivitaet.fit') {
+      const bin = atob(base64), u = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      return openWith([new File([u], name)]);
+    }
+  };
+
+  fillMeta(); buildRows(); calc(); showTimes();
+})();
+</script>
+</body>
+</html>
