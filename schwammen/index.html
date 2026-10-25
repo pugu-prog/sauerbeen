@@ -744,7 +744,8 @@
       const l = raw.toLowerCase().replace(/×/g, 'x');
       const pp = l.match(PAUSE_PREFIX);
       if (pp) { const d = parseDur(l.slice(pp[0].length).replace(/\(.*\)/, '').replace(/paus[e]?/, '').trim()); if (isFinite(d)) { addPause(d); continue; } }
-      let m = l.match(/^(\d+)\s*x\s*(.+)$/);
+      // "8-10x200m": a range (not everyone swims the same number) → the maximum; mergePlan keeps what was swum
+      let m = l.match(/^(?:\d+\s*[-–]\s*)?(\d+)\s*x\s*(.+)$/);
       if (m) {
         const n = +m[1]; let rest = m[2].trim(), items;
         if (rest.startsWith('(')) {
@@ -1127,8 +1128,8 @@
       const auto = `${lapName}: ${nAuto} Schwämm-Stécker`;
       if (nPlan) {
         const m = mergePlan(lapSlot, plan.entries, plan.warm);
-        // only part of the plan found while the watch has more swims: the plan does not fit (as Velo)
-        if (m.found && !(m.found < nPlan && nAuto > m.found)) {
+        // not everyone swims the whole plan (8 of 10 × 200 m is fine); a single hit among more swims means the plan does not fit
+        if (m.found >= 2 || (m.found && (m.found === nPlan || nAuto === m.found))) {
           entries = m.entries;
           msg = `${auto}. Plang „${plan.summary}“: ${m.found < nPlan ? `${m.found} vun ${nPlan}` : nPlan} Reps fonnt` +
                 (nAuto > m.found ? `, ${nAuto - m.found} Stécker (Ein-/Ausschwammen …) ignoréiert` : '') + '.';
