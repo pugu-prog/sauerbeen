@@ -143,6 +143,9 @@
     .ptitle .sblogo { height: 24px; }
     input, textarea { border-color: transparent; background: transparent; }
     .meta input { background: var(--input); border-color: var(--input-line); }
+    /* example values (placeholders) and the date/time pickers are no data: not on the PDF */
+    input::placeholder { color: transparent; }
+    input::-webkit-calendar-picker-indicator { display: none; }
     td.in, td.in input { background: transparent; }
     tr.empty { display: none; }
     table { min-width: 0; }
