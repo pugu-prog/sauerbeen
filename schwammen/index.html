@@ -333,10 +333,10 @@
 
 <dialog id="imp" aria-labelledby="impTitle">
   <h2 id="impTitle">Training importéieren</h2>
-  <p class="hint">FIT-Datei vun der Auer (Coros, Garmin, Suunto … „Schwammen am Bassin“). D'Tool liest all Bunn: Reps, Pausen, Lag, Zich an HR. Mam Plang derbäi gëtt Ein-/Ausschwammen erkannt. De Fichier gëtt hei um Apparat gelies, näischt gëtt eropgelueden. Ëmmer kontrolléieren, ier een iwwerhëlt.</p>
+  <p class="hint">FIT-Datei vun der Auer (Coros, Garmin, Suunto …), beim Fräiwaasser och GPX. Am Bassin liest d'Tool all Bunn: Reps, Pausen, Lag, Zich an HR. Mam Plang derbäi gëtt Ein-/Ausschwammen erkannt. De Fichier gëtt hei um Apparat gelies, näischt gëtt eropgelueden. Ëmmer kontrolléieren, ier een iwwerhëlt.</p>
   <label class="zone" id="zLaps" for="impFileLaps">
     <b>Resultat vun der Auer</b>
-    <span>FIT-Datei (oder Garmin-ZIP) hei lassgoen oder klicken</span>
+    <span>FIT-Datei (oder Garmin-ZIP), beim Fräiwaasser och GPX: hei lassgoen oder klicken</span>
     <span class="got" id="gotLaps"></span>
     <input type="file" id="impFileLaps">
   </label>
@@ -909,6 +909,74 @@
     });
   }
 
+  // ---------- GPX (Garmin Connect export): open water only ----------
+  // a pool swim has no GPS → Garmin writes an empty track. Open water: the swim stretches are the reps; the watch's
+  // auto pause (no points for ≥ 10 s) and standing still (< 4 m in 20 s, ≥ 20 s long) are the pauses
+  const hav = (p, q) => {
+    const r = Math.PI / 180, a = Math.sin((q.lat - p.lat) * r / 2) ** 2 + Math.cos(p.lat * r) * Math.cos(q.lat * r) * Math.sin((q.lon - p.lon) * r / 2) ** 2;
+    return 2 * 6371000 * Math.asin(Math.sqrt(a));
+  };
+  function parseGPX(xml) {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    const kid = (el, name) => [...el.getElementsByTagName('*')].find(x => x.localName === name)?.textContent;
+    const pts = [...doc.getElementsByTagNameNS('*', 'trkpt')].map(p => ({
+      lat: +p.getAttribute('lat'), lon: +p.getAttribute('lon'), ts: Date.parse(kid(p, 'time')) / 1000,
+      hr: +kid(p, 'hr') || null, temp: kid(p, 'atemp') != null ? +kid(p, 'atemp') : null })).filter(p => isFinite(p.ts) && isFinite(p.lat));
+    const type = [...doc.getElementsByTagNameNS('*', 'type')][0]?.textContent || '';
+    const name = [...doc.getElementsByTagNameNS('*', 'name')].find(n => n.parentNode.localName === 'trk')?.textContent || '';
+    if (pts.length < 2) throw new Error(/lap_swim|pool/i.test(type)
+      ? 'An dëser GPX-Datei vum Bassin si keng Donnéeën (am Bassin gëtt et kee GPS, d\'Bunne stinn nëmmen an der FIT-Datei). Garmin Connect: Aktivitéit → ⚙ → „Original exportéieren“ (ZIP mat der FIT-Datei).'
+      : 'An dëser GPX-Datei si keng GPS-Punkten.');
+    // still[i]: from point i on, less than 4 m within the next 20 s
+    const still = pts.map((p, i) => {
+      let j = i; while (j < pts.length - 1 && pts[j + 1].ts - p.ts <= 20 && pts[j + 1].ts - pts[j].ts < 10) j++;
+      if (pts[j].ts - p.ts < 15) return false;
+      return hav(p, pts[j]) < 4;
+    });
+    const segs = []; let cur = null;
+    const close = () => { if (cur) segs.push(cur); cur = null; };
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i], gap = i > 0 && p.ts - pts[i - 1].ts >= 10;
+      const isStill = still[i];
+      if (gap || (cur && cur.still !== isStill)) close();
+      if (!cur) cur = { still: isStill, a: p.ts, b: p.ts, d: 0, hr: [], i0: i };
+      else cur.d += hav(pts[i - 1], p);
+      cur.b = p.ts; if (p.hr) cur.hr.push(p.hr);
+    }
+    close();
+    // a standstill shorter than 20 s is no pause: it stays in the swim
+    const merged = [];
+    segs.forEach(s => {
+      const last = merged[merged.length - 1];
+      const short = s.still && s.b - s.a + 20 < 25;     // still[i] looks 20 s ahead: standing ≈ (b − a) + 20 s
+      if (last && !last.still && (short || !s.still) && s.a - last.b < 10) { last.b = s.b; last.d += s.d + hav(pts[s.i0 - 1] || pts[s.i0], pts[s.i0]); last.hr.push(...s.hr); }
+      else merged.push(Object.assign({}, s, { still: s.still && !short }));
+    });
+    const out = [];
+    merged.forEach((s, k) => {
+      if (s.still) return;
+      if (out.length) {
+        const prev = merged.slice(0, k).reverse().find(x => !x.still);
+        const gap = s.a - prev.b, hr = pts.filter(p => p.ts >= prev.b && p.ts <= s.a + 5 && p.hr).map(p => p.hr);
+        out.push(E('pause', { time: fmtCs(gap), hr: hr.length ? String(Math.min(...hr)) : '', hrs: hr.length ? [Math.min(...hr)] : [] }));
+      }
+      out.push(E('rep', { dist: String(Math.round(s.d)), time: fmtCs(s.b - s.a), hr: s.hr.length ? String(Math.max(...s.hr)) : '', hrs: s.hr.length ? [Math.max(...s.hr)] : [] }));
+    });
+    // a few metres between two stops (drifting, turning round) are no rep
+    for (let i = out.length - 1; i >= 0; i--) if (out[i].type === 'rep' && metres(out[i].dist) < 25 && out.filter(e => e.type === 'rep').length > 1) out[i].type = 'skip';
+    const temps = pts.map(p => p.temp).filter(v => v != null).sort((a, b) => a - b);
+    const total = pts.slice(1).reduce((s, p, i) => s + (p.ts - pts[i].ts < 10 ? hav(pts[i], p) : 0), 0);
+    return { entries: out, meta: { startUtc: pts[0].ts, lat: pts[0].lat, lon: pts[0].lon, temp: temps.length ? temps[temps.length >> 1] : null,
+      dist: total, time: pts[pts.length - 1].ts - pts[0].ts, open: true, name } };
+  }
+  async function placeName(lat, lon) {
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&accept-language=de&lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`);
+      const a = r.ok ? (await r.json()).address || {} : {};
+      return (a.country_code === 'lu' ? a.village || a.town || a.city : a.city || a.town || a.village) || a.municipality || a.hamlet || '';
+    } catch { return ''; }
+  }
+
   // Garmin Connect "Export Original" = ZIP with one .fit inside
   async function unzipFirst(buf, re) {
     const dv = new DataView(buf);
@@ -936,8 +1004,8 @@
   // ---------- activity meta: date, time of day, pool, water temperature ----------
   const metaFields = m => {
     const o = {};
-    if (m.start != null) {
-      const utc = (m.start + FIT_EPOCH) * 1000;
+    if (m.start != null || m.startUtc != null) {
+      const utc = m.startUtc != null ? m.startUtc * 1000 : (m.start + FIT_EPOCH) * 1000;   // GPX: UTC → this browser's time zone
       const d = m.tzOffset != null ? new Date(utc + m.tzOffset * 1000) : new Date(utc - new Date(utc).getTimezoneOffset() * 60000);
       o.date = d.toISOString().slice(0, 10); o.clock = d.toISOString().slice(11, 16);
     }
@@ -948,9 +1016,12 @@
     const mf = metaFields(m);
     if (mf.date) { S.date = mf.date; S.clock = mf.clock; }
     if (m.pool) S.pool = m.poolYd ? fmtNum(m.pool) + ' yd' : fmtNum(m.pool) + ' m';
-    else if (m.sub === 18) S.pool = 'Fräiwaasser';        // sub_sport open_water
+    else if (m.sub === 18 || m.open) S.pool = 'Fräiwaasser';        // sub_sport open_water / open water GPX
     S.water = m.temp != null ? String(m.temp) : '';
-    S.sess = m.dist ? { d: m.dist, t: m.time } : null;
+    S.sess = m.dist ? { d: Math.round(m.dist), t: m.time } : null;
+    if (m.place) S.place = m.place;
+    // GPX title of a race ("Ironman 70.3 Duisburg - Natation en eau libre") names the session; "20260907 swim openwater" does not
+    if (m.name && !/^\d{8}\b/.test(m.name) && !String(S.training || '').trim()) S.training = m.name;
     fillMeta(); calc();
   }
 
@@ -1054,7 +1125,8 @@
       const auto = `${lapName}: ${nAuto} Schwämm-Stécker`;
       if (nPlan) {
         const m = mergePlan(lapSlot, plan.entries, plan.warm);
-        if (m.found) {
+        // only part of the plan found while the watch has more swims: the plan does not fit (as Velo)
+        if (m.found && !(m.found < nPlan && nAuto > m.found)) {
           entries = m.entries;
           msg = `${auto}. Plang „${plan.summary}“: ${m.found < nPlan ? `${m.found} vun ${nPlan}` : nPlan} Reps fonnt` +
                 (nAuto > m.found ? `, ${nAuto - m.found} Stécker (Ein-/Ausschwammen …) ignoréiert` : '') + '.';
@@ -1062,7 +1134,7 @@
                  msg = `${auto}. De Plang „${plan.summary}“ passt net op d'Distanzen, dofir alles als Rep. Plang verbesseren oder eidel maachen.`; }
       } else {
         entries = lapSlot.map(e => Object.assign({}, e));
-        msg = `${auto}, all als Rep. Ein-/Ausschwammen hei op „ignoréieren“ setzen, oder de Plang derbäi schreiwen (z.B. „400m Aschwammen; 10x200m (60s)“).`;
+        msg = nAuto === 1 ? auto + '.' : `${auto}, all als Rep. Ein-/Ausschwammen hei op „ignoréieren“ setzen, oder de Plang derbäi schreiwen (z.B. „400m Aschwammen; 10x200m (60s)“).`;
       }
       msg += lapInfo;
     } else if (nPlan) {
@@ -1100,9 +1172,21 @@
     try {
       $('impApply').disabled = true;
       let buf = await file.arrayBuffer();
-      const b = new Uint8Array(buf.slice(0, 12));
+      const b = new Uint8Array(buf.slice(0, 12)), head = new TextDecoder().decode(buf.slice(0, 600));
+      if (/<gpx/i.test(head)) {
+        status('GPX gëtt gelies …');
+        const g = parseGPX(new TextDecoder().decode(buf));
+        impMeta = g.meta; lapSlot = g.entries; lapName = file.name || 'GPX';
+        const mf = metaFields(g.meta), n = g.entries.filter(e => e.type === 'rep').length;
+        lapInfo = ` Fräiwaasser (GPS): ${fmtNum(Math.round(g.meta.dist))} m an ${fmtHMS(g.meta.time)}, ${mf.date.split('-').reverse().join('.')} ${mf.clock}` +
+                  (g.meta.temp != null ? ` · Auer-Sensor ${g.meta.temp} °C` : '') + '. ' +
+                  (n > 1 ? 'Stécker tëscht Auto-Paus oder Stoen = Reps.' : 'Duerchgeschwommen = 1 Rep.') + ' GPS am Waasser ass ongenau, d\'Distanz ka puer Prozent ofwäichen.';
+        placeName(g.meta.lat, g.meta.lon).then(p => { if (p && impMeta === g.meta) g.meta.place = p; });
+        combine();
+        return;
+      }
       if (b[0] === 0x50 && b[1] === 0x4B) buf = await unzipFirst(buf, /\.fit$/i);
-      else if (String.fromCharCode(b[8], b[9], b[10], b[11]) !== '.FIT') throw new Error('Dat ass keng FIT-Datei. W.e.gl. d\'FIT-Datei vun der Auer huelen (Coros-App: Aktivitéit → Deelen → FIT; Garmin Connect: Export Original).');
+      else if (String.fromCharCode(b[8], b[9], b[10], b[11]) !== '.FIT') throw new Error('Dat ass keng FIT- oder GPX-Datei. W.e.gl. d\'Datei vun der Auer huelen (Coros-App: Aktivitéit → Deelen → FIT; Garmin Connect: Export Original).');
       status('Aktivitéit gëtt gelies …');
       const fit = parseFIT(buf);
       impMeta = fit.meta;
