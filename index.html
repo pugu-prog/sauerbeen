@@ -28,6 +28,15 @@
   .card .go { margin-top: auto; padding-top: 10px; font-weight: 600; color: var(--sb-blue); }
   .card.soon { opacity: .6; border-top-color: #c3c8da; box-shadow: none; border: 1px dashed #c3c8da; border-top-width: 5px; }
   .card.soon .go { color: var(--muted); }
+  .tips { max-width: 760px; margin: 0 auto 28px; padding: 0 16px; }
+  .tips section { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.12); padding: 18px 20px; border-left: 5px solid var(--sb-yellow); }
+  .tips h2 { margin: 0 0 6px; font: 900 19px/1.2 "Titillium Web", Inter, sans-serif; color: var(--sb-blue); text-transform: uppercase; }
+  .tips p { margin: 0 0 10px; }
+  .tips ul { margin: 0 0 10px; padding-left: 20px; }
+  .tips li { margin: 3px 0; }
+  .tips .ok { color: #1d7a3a; font-weight: 600; }
+  .tips .no { color: #b3261e; font-weight: 600; }
+  .tips small { color: var(--muted); }
   footer { text-align: center; color: var(--muted); font-size: 13px; padding: 0 16px 28px; }
   footer a { color: var(--sb-blue); }
 </style>
@@ -54,10 +63,24 @@
   <a class="card" href="schwammen/">
     <span class="ico" aria-hidden="true">🏊</span>
     <h2>Schwammen</h2>
-    <p>Pace /100 m, Zich/Bunn, SWOLF, HR pro Rep. Import vun der FIT-Datei (all Bunn) a vum Trainingsplang.</p>
+    <p>Pace /100 m, Zich/Bunn, SWOLF, HR pro Rep. Import vu FIT/TCX (am Bassin all Bunn) a vum Trainingsplang.</p>
     <span class="go">Opmaachen →</span>
   </a>
 </main>
+<div class="tips">
+  <section aria-labelledby="whichFile">
+    <h2 id="whichFile">Wéi eng Datei vun der Auer?</h2>
+    <p><span class="ok">FIT oder TCX</span>: allebéid ginn, et ass egal wéi eng. Do sinn d'Ronnen (Laps) dran, a mat deenen erkennt d'Tool d'Reps an d'Pausen.
+       <span class="no">GPX léiwer net</span>: do ass just d'GPS-Spur dran, keng Ronnen. Beim Schwammen am Bassin ass eng GPX souguer eidel.</p>
+    <ul>
+      <li><b>Garmin Connect</b> (um Computer): Aktivitéit opmaachen → ⚙ uewe riets → „Original exportéieren“ (ZIP mat der FIT, einfach esou eranzéien) oder „Als TCX exportéieren“.</li>
+      <li><b>Coros-App</b>: Aktivitéit → Deelen → FIT.</li>
+      <li><b>Strava</b> (um Computer): Aktivitéit → ⋯ → „Original exportéieren“ (net „GPX exportéieren“).</li>
+      <li><b>Aner Auer</b> (Suunto, Polar, Wahoo …): an der App „Exportéieren“ oder „Deelen“ sichen, FIT oder TCX wielen.</li>
+    </ul>
+    <small>Beim Schwammen am Bassin gëtt d'FIT nach e bësse méi: Lag an Zich pro Bunn stinn nëmmen do dran. D'Dateie ginn um eegenen Apparat gelies, näischt gëtt eropgelueden.</small>
+  </section>
+</div>
 <footer>Problem oder Iddi? <a href="https://form.jotform.com/262735789931069" target="_blank" rel="noopener">Feedback-Formulaire</a></footer>
 </body>
 </html>
