@@ -1097,7 +1097,9 @@
   // hardness of a lap: average watt when the laps have power, else the speed
   function classify(rows) {
     const withPw = rows.filter(r => r.pw > 0).length >= Math.max(2, rows.filter(r => r.t > 0).length / 2);
-    const x = r => withPw ? (r.pw > 0 ? r.pw : 0) : r.d > 0 && r.t > 0 ? r.d / r.t : 0;
+    // no watts: the power estimated from speed and climb (parseFIT, ep) where the stretches were cut by it, else the speed
+    const withEp = !withPw && rows.filter(r => r.ep > 0).length >= Math.max(2, rows.filter(r => r.t > 0).length / 2);
+    const x = r => withPw ? (r.pw > 0 ? r.pw : 0) : withEp ? (r.ep > 0 ? r.ep : 0) : r.d > 0 && r.t > 0 ? r.d / r.t : 0;
     // reps = the hard group: sort and cut at the first drop of more than 25 %
     // laps of a few seconds (steps of a workout skipped with the lap button) are no rep and no pause
     const blip = r => r.t > 0 && r.t < 20 && rows.some(q => q.t >= 20);
@@ -1110,7 +1112,7 @@
     if (!withPw && run.length >= 2 && L0 >= 1000 && run.slice(0, -1).every(r => Math.abs(r.d - L0) < 1) && run[run.length - 1].d < L0)
       return rows.map(r => r.d > 0 ? 'rep' : 'pause');
     // warm-up / cool-down: a "rep" at either end that is easier than the typical rep and much longer or shorter
-    const size = r => withPw || !(r.d > 0) ? r.t : r.d;
+    const size = r => withPw || withEp || !(r.d > 0) ? r.t : r.d;
     const repIdx = typed.map((t, i) => t === 'rep' ? i : -1).filter(i => i >= 0);
     if (repIdx.length >= 3) {
       const med = a => { const b = [...a].sort((p, q) => p - q); return b[(b.length - 1) >> 1]; };
@@ -1152,6 +1154,31 @@
     let mn = null, mx = null;
     for (const r of recs) if (r.ts >= from && r.ts <= to && r.hr > 0) { mn = mn == null ? r.hr : Math.min(mn, r.hr); mx = mx == null ? r.hr : Math.max(mx, r.hr); }
     return { mn, mx };
+  }
+  // no power meter: power estimated from speed and climb [{ts, pw}] per second (rider + bike 85 kg, CdA 0.32, Crr 0.005,
+  // no wind). Only for finding reps (hard vs easy), never shown as watts. Speed alone does not do: uphill the reps are
+  // slower than the pauses downhill. null when the file has watts or no distance / altitude.
+  function estPower(recs) {
+    if (!recs?.length || recs.some(r => r.pw != null)) return null;
+    const D = recs.filter(r => r.dist != null);
+    if (D.length < 600 || recs.filter(r => r.alt != null).length < D.length / 2) return null;
+    const t0 = D[0].ts, N = D[D.length - 1].ts - t0 + 1, dist = new Float64Array(N), alt = new Float64Array(N), has = new Uint8Array(N);
+    D.forEach(r => { dist[r.ts - t0] = r.dist; has[r.ts - t0] = 1; });
+    let a0 = recs.find(r => r.alt != null).alt; const altAt = new Array(N).fill(null);
+    recs.forEach(r => { const i = r.ts - t0; if (i >= 0 && i < N && r.alt != null) altAt[i] = r.alt; });
+    for (let i = 0; i < N; i++) { if (!has[i] && i) dist[i] = dist[i - 1]; if (altAt[i] != null) a0 = altAt[i]; alt[i] = a0; }
+    const sm = (a, h) => { const cs = new Float64Array(N + 1); for (let i = 0; i < N; i++) cs[i + 1] = cs[i] + a[i];
+      return Array.from(a, (_, i) => (cs[Math.min(N, i + h + 1)] - cs[Math.max(0, i - h)]) / (Math.min(N, i + h + 1) - Math.max(0, i - h))); };
+    const v = sm(Array.from(dist, (d, i) => i ? Math.max(0, d - dist[i - 1]) : 0), 2), h = sm(alt, 10);
+    const m = 85, out = [];
+    for (let i = 0; i < N; i++) {
+      if (!has[i]) continue;
+      const a = Math.max(0, i - 10), b = Math.min(N - 1, i + 10), dd = dist[b] - dist[a];
+      const g = dd > 20 ? Math.max(-0.15, Math.min(0.15, (h[b] - h[a]) / dd)) : 0;
+      const acc = (v[Math.min(N - 1, i + 1)] - v[Math.max(0, i - 1)]) / 2;
+      out.push({ ts: t0 + i, pw: Math.max(0, v[i] * (m * 9.81 * (g + 0.005) + m * acc) + 0.6 * 0.32 * v[i] ** 3) });
+    }
+    return out;
   }
 
   // Minimal FIT decoder: lap (19), record (20), session (18), activity (34), weather_conditions (128)
@@ -1196,7 +1223,8 @@
         }
         p += def.devSize;
         if (v[253] != null) { lastTs = v[253]; ts = v[253]; }
-        if (def.g === 20 && ts != null && (v[3] != null || v[5] != null || v[7] != null)) recs.push({ ts, hr: v[3], pw: v[7], dist: v[5] != null ? v[5] / 100 : null });
+        if (def.g === 20 && ts != null && (v[3] != null || v[5] != null || v[7] != null))
+          recs.push({ ts, hr: v[3], pw: v[7], dist: v[5] != null ? v[5] / 100 : null, alt: v[78] != null ? v[78] / 5 - 500 : v[2] != null ? v[2] / 5 - 500 : null });
         if (def.g === 21 && v[0] === 0 && v[1] != null && ts != null) evs.push({ ts, type: v[1] });   // timer start / stop
         // start position (semicircles → degrees) for the weather lookup: first GPS record, else the session start
         if ((def.g === 20 && v[0] != null && v[1] != null) || (def.g === 18 && v[3] != null && v[4] != null)) {
@@ -1290,10 +1318,11 @@
     // (power smoothed over 11 s). Hard = above the power that separates reps from pauses: the 25 % jump between the lap
     // averages (as classify()), else – laps unusable – the two groups of the 30-s power if they lie clearly apart.
     // Stretches: easy ≥ 20 s, hard ≥ 60 s; shorter ones belong to their neighbour. Laps pressed on time stay as they are.
-    const P = recs.filter(r => r.pw != null);
+    // no power meter: the power estimated from speed and climb (estPower), always with the road checks; never shown as watts
+    const EP = estPower(recs), P = EP || recs.filter(r => r.pw != null);
     // road: outdoor intervals are not as steady as on the trainer (wind, hills, traffic) – the two power groups overlap
     // more (Otsu 60–80 %); then longer smoothing, longer minimum stretches and a check of every rep against its pauses
-    let road = false;
+    let road = !!EP;
     const pThr = (() => {
       // (1) the power itself: 30-s averages fall into two clearly separate groups (Otsu; ≥ 80 % of the spread lies
       //     between the groups) → reps and pauses, even when the laps are of no use (button forgotten)
@@ -1309,11 +1338,12 @@
             if (b > best) { best = b; bt = k; }
           }
           const m0 = mean(srt.slice(0, bt)), m1 = mean(srt.slice(bt));
-          if (tot > 0 && best / tot >= 0.8 && N - bt >= 4 && m1 / m0 >= 1.25) return (srt[bt - 1] + srt[bt]) / 2;
+          if (!EP && tot > 0 && best / tot >= 0.8 && N - bt >= 4 && m1 / m0 >= 1.25) return (srt[bt - 1] + srt[bt]) / 2;
           if (tot > 0 && best / tot >= 0.6 && N - bt >= 4 && m1 / m0 >= 1.35) { road = true; return (srt[bt - 1] + srt[bt]) / 2; }
         }
       }
       // (2) else the 25 % jump between the lap averages (as classify()), not for the auto laps of a plain ride
+      if (EP) return 0;
       const run = out.filter(x => x.d > 0);
       if (run.length >= 2 && run.slice(0, -1).every(x => Math.abs(x.d - run[0].d) < 1)) return 0;
       const hard = out.filter(x => x.pw > 0 && x.t >= 20).map(x => x.pw).sort((a, b) => b - a);
@@ -1323,7 +1353,9 @@
     const part = (s, e) => {
       const rs = recs.filter(r => r.ts >= s && r.ts < e), hs = rs.filter(r => r.hr > 0).map(r => r.hr), ps = rs.filter(r => r.pw != null).map(r => r.pw);
       const ds = rs.filter(r => r.dist != null);
+      const es = EP ? EP.filter(r => r.ts >= s && r.ts < e) : [];
       return { t: e - s, d: ds.length > 1 ? ds[ds.length - 1].dist - ds[0].dist : NaN, start: s, end: e,
+               ep: es.length ? es.reduce((q, r) => q + r.pw, 0) / es.length : undefined,
                pw: ps.length ? ps.reduce((q, v) => q + v, 0) / ps.length : undefined,
                hrMax: hs.length ? Math.max(...hs) : undefined, hrMin: hs.length ? Math.min(...hs) : undefined };
     };
@@ -1370,10 +1402,11 @@
     if (road) {                                   // keep only real intervals: ≥ 3 reps of about the same length (a steady ride with
       const hd = out.filter(x => x.kind !== 'pause'), ts = hd.map(x => x.t);   // hills gives irregular stretches), each clearly harder than its pauses
       const mt = ts.reduce((s, v) => s + v, 0) / (ts.length || 1), cv = Math.sqrt(ts.reduce((s, v) => s + (v - mt) ** 2, 0) / (ts.length || 1)) / mt;
+      const pw = y => EP ? y?.ep : y?.pw;
       const ok = hd.length >= 3 && ts.every(v => v > 0) && cv <= 0.3 && out.every((x, q) => {
-        if (x.kind === 'pause' || !(x.pw > 0)) return true;
-        const nb = [out[q - 1], out[q + 1]].filter(y => y?.kind === 'pause' && y.pw > 0);
-        return !nb.length || x.pw >= 1.15 * nb.reduce((s, y) => s + y.pw, 0) / nb.length;
+        if (x.kind === 'pause' || !(pw(x) > 0)) return true;
+        const nb = [out[q - 1], out[q + 1]].filter(y => y?.kind === 'pause' && pw(y) > 0);
+        return !nb.length || pw(x) >= 1.15 * nb.reduce((s, y) => s + pw(y), 0) / nb.length;
       });
       if (!ok) out.splice(0, out.length, ...backup);
     }
@@ -1403,6 +1436,12 @@
         const hm = c.map(x => x.hrMax).filter(v => v != null);
         res.push({ d: c.reduce((s, x) => s + (x.d || 0), 0), t: c.reduce((s, x) => s + x.t, 0), hrMax: hm.length ? Math.max(...hm) : undefined, kind: '' });
       } else res.push(...c);
+    });
+    // no watts: every lap (also the laps pressed with the button) gets the estimated power for classify()
+    if (EP) res.forEach(x => {
+      if (x.ep != null || x.start == null || x.end == null) return;
+      const es = EP.filter(r => r.ts >= x.start && r.ts < x.end);
+      if (es.length) x.ep = es.reduce((q, r) => q + r.pw, 0) / es.length;
     });
     laps.splice(0, laps.length, ...res);
     meta.stopped = stops.length > 0 || res.some(x => x.stop);
@@ -1713,6 +1752,7 @@
   // for fixed hard/easy groups (outdoor ride). The plan "8x3min (2min)" is laid over the 1-s power as a template:
   // the start where the reps are hardest compared to the pauses wins, then each rep edge moves (±15 s) to the
   // sharpest change of the power. Only time steps with a time pause in between; every rep must be ≥ 15 % above its pauses.
+  // No power meter: the same with the power estimated from speed and climb (estPower), the reps then without watts.
   function fitPlan(recs, plan) {
     const steps = [];
     plan.forEach(e => {
@@ -1720,7 +1760,7 @@
       else if (e.type === 'pause' && steps.length) steps[steps.length - 1].p = secs(e.time);
     });
     if (!recs?.length || !steps.length || steps.some((r, i) => !(r.t > 0) || (i < steps.length - 1 && !(r.p > 0)))) return null;
-    const P = recs.filter(r => r.pw != null); if (P.length < 300) return null;
+    const EP = estPower(recs), P = EP || recs.filter(r => r.pw != null); if (P.length < 300) return null;
     const t0 = P[0].ts, N = P[P.length - 1].ts - t0 + 1, pw = new Float64Array(N), hr = new Array(N).fill(null), dist = new Array(N).fill(null);
     P.forEach(r => { pw[r.ts - t0] = r.pw; });
     recs.forEach(r => { const i = r.ts - t0; if (i >= 0 && i < N) { if (r.hr > 0) hr[i] = r.hr; if (r.dist != null) dist[i] = r.dist; } });
@@ -1762,9 +1802,10 @@
           hr: q.hrMin != null ? String(q.hrMin) : '', hrs: [q.hrMax, q.hrMin].filter(v => v != null) }));
       }
       const q = pieceOf(r.a, r.b);
-      out.push(E('rep', { time: fmtCs(q.t), dist: isFinite(q.d) ? fmtNum(Math.round(q.d * 10) / 10) : '', gps: q.d, w: String(Math.round(q.w)), pw: q.w,
+      out.push(E('rep', { time: fmtCs(q.t), dist: isFinite(q.d) ? fmtNum(Math.round(q.d * 10) / 10) : '', gps: q.d, w: EP ? '' : String(Math.round(q.w)), pw: EP ? undefined : q.w,
         hr: q.hrMax != null ? String(q.hrMax) : '', hrs: [q.hrMax, q.hrMin].filter(v => v != null), note: r.note || '' }));
     });
+    out.est = !!EP;
     return out;
   }
   function combine() {
@@ -1783,7 +1824,8 @@
         if (m.entries && m.found < nPlan && nAuto > m.found) m.entries = null;
         // laps do not hold the plan: look for it in the power stream (FIT)
         const fp = !m.entries && fitPlan(lapSlot.recs, plan.entries);
-        if (fp) { entries = fp; msg = `${auto}. D'Ronne passen net op de Plang „${plan.summary}“: déi ${nPlan} Reps goufen am Wattverlaf gesicht (Ufank/Enn op ± e puer Sekonnen).`; }
+        if (fp) { entries = fp; msg = `${auto}. D'Ronne passen net op de Plang „${plan.summary}“: déi ${nPlan} Reps goufen ${fp.est
+          ? 'um Tempo an der Héicht gesicht (keng Watt am Fichier; Ufank/Enn op ± 20 Sekonnen)' : 'am Wattverlaf gesicht (Ufank/Enn op ± e puer Sekonnen)'}.`; }
         else
         if (m.entries) { entries = m.entries; msg = `${auto}. Plang „${plan.summary}“: ${m.found < nPlan ? `${m.found} vun ${nPlan}` : nPlan} Reps an de Runde fonnt, d'Runden dertëscht sinn d'Pausen.`; }
         else if (/^GPX/.test(lapSrc)) { entries = copy(); err = true; msg = `${auto}. De Plang „${plan.summary}“ ka net an de km-Splits gesicht ginn.`; }
