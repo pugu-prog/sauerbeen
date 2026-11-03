@@ -1291,6 +1291,9 @@
     // averages (as classify()), else – laps unusable – the two groups of the 30-s power if they lie clearly apart.
     // Stretches: easy ≥ 20 s, hard ≥ 60 s; shorter ones belong to their neighbour. Laps pressed on time stay as they are.
     const P = recs.filter(r => r.pw != null);
+    // road: outdoor intervals are not as steady as on the trainer (wind, hills, traffic) – the two power groups overlap
+    // more (Otsu 60–80 %); then longer smoothing, longer minimum stretches and a check of every rep against its pauses
+    let road = false;
     const pThr = (() => {
       // (1) the power itself: 30-s averages fall into two clearly separate groups (Otsu; ≥ 80 % of the spread lies
       //     between the groups) → reps and pauses, even when the laps are of no use (button forgotten)
@@ -1307,6 +1310,7 @@
           }
           const m0 = mean(srt.slice(0, bt)), m1 = mean(srt.slice(bt));
           if (tot > 0 && best / tot >= 0.8 && N - bt >= 4 && m1 / m0 >= 1.25) return (srt[bt - 1] + srt[bt]) / 2;
+          if (tot > 0 && best / tot >= 0.6 && N - bt >= 4 && m1 / m0 >= 1.35) { road = true; return (srt[bt - 1] + srt[bt]) / 2; }
         }
       }
       // (2) else the 25 % jump between the lap averages (as classify()), not for the auto laps of a plain ride
@@ -1323,17 +1327,26 @@
                pw: ps.length ? ps.reduce((q, v) => q + v, 0) / ps.length : undefined,
                hrMax: hs.length ? Math.max(...hs) : undefined, hrMin: hs.length ? Math.min(...hs) : undefined };
     };
+    const backup = road ? out.slice() : null;
+    if (road) {                                   // auto laps (e.g. every 5 km) cut through the reps: one stretch from start to end
+      const mv = out.filter(x => x.kind !== 'pause');
+      if (mv.length >= 2 && mv.slice(0, -1).every(x => Math.abs(x.d - mv[0].d) < 1) && mv.every(x => x.start != null && x.end != null)) {
+        const a = mv[0].start, b = mv[mv.length - 1].end;
+        out.splice(0, out.length, { start: a, end: b, t: mv.reduce((s, x) => s + x.t, 0), d: mv.reduce((s, x) => s + (x.d || 0), 0), kind: '' });
+      }
+    }
+    const half = road ? 15 : 5;                   // smoothing ± s
     if (P.length && pThr) for (let i = out.length - 1; i >= 0; i--) {
       const x = out[i];
       if (x.start == null || x.end == null || x.end - x.start < 80) continue;
       const seg = P.filter(r => r.ts >= x.start && r.ts < x.end);
       if (seg.length < 80) continue;
-      const sm = seg.map((r, j) => { const w = seg.slice(Math.max(0, j - 5), j + 6); return w.reduce((s, q) => s + q.pw, 0) / w.length; });
+      const sm = seg.map((r, j) => { const w = seg.slice(Math.max(0, j - half), j + half + 1); return w.reduce((s, q) => s + q.pw, 0) / w.length; });
       // runs of hard / easy seconds
       let runs = [];
       sm.forEach((v, j) => { const hd = v >= pThr; if (runs.length && runs[runs.length - 1].hd === hd) runs[runs.length - 1].n++; else runs.push({ hd, j, n: 1 }); });
       // too short stretches join their neighbours (shortest first), until all are long enough
-      const minN = r => r.hd ? 60 : 20;
+      const minN = r => r.hd ? 60 : road ? 40 : 20;
       for (;;) {
         const k = runs.reduce((b, r, q) => r.n < minN(r) && (b < 0 || r.n < runs[b].n) ? q : b, -1);
         if (k < 0 || runs.length === 1) break;
@@ -1345,13 +1358,24 @@
       if (runs.length < 2 || !runs.some(r => r.hd)) continue;
       // exact change: within ±6 s of the smoothed change, the second where the power before and after differs most
       const avgP = (a, b) => { const w = seg.slice(Math.max(0, a), Math.max(0, b)); return w.length ? w.reduce((s, q) => s + q.pw, 0) / w.length : 0; };
-      const exact = j => { let bj = j, bd = -1; for (let k = Math.max(1, j - 6); k <= Math.min(seg.length - 1, j + 6); k++) { const d = Math.abs(avgP(k, k + 5) - avgP(k - 5, k)); if (d > bd) { bd = d; bj = k; } } return bj; };
+      const ex = road ? half : 6;                 // road: the smoothed change lies further off
+      const exact = j => { let bj = j, bd = -1; for (let k = Math.max(1, j - ex); k <= Math.min(seg.length - 1, j + ex); k++) { const d = Math.abs(avgP(k, k + 5) - avgP(k - 5, k)); if (d > bd) { bd = d; bj = k; } } return bj; };
       const cut = runs.map((r, q) => q ? seg[exact(r.j)].ts : x.start).concat(x.end);
       const pieces = runs.map((r, q) => Object.assign(part(cut[q], cut[q + 1]), { kind: r.hd ? (x.kind === 'pause' ? '' : x.kind || '') : 'pause' }));
       // hard pieces keep the lap's timer time (hundredths) when the lap had only one
       const hp = pieces.filter((pc, q) => runs[q].hd);
       if (hp.length === 1) hp[0].t = x.t - pieces.filter((pc, q) => !runs[q].hd).reduce((s, pc) => s + pc.t, 0);
       out.splice(i, 1, ...pieces);
+    }
+    if (road) {                                   // keep only real intervals: ≥ 3 reps of about the same length (a steady ride with
+      const hd = out.filter(x => x.kind !== 'pause'), ts = hd.map(x => x.t);   // hills gives irregular stretches), each clearly harder than its pauses
+      const mt = ts.reduce((s, v) => s + v, 0) / (ts.length || 1), cv = Math.sqrt(ts.reduce((s, v) => s + (v - mt) ** 2, 0) / (ts.length || 1)) / mt;
+      const ok = hd.length >= 3 && ts.every(v => v > 0) && cv <= 0.3 && out.every((x, q) => {
+        if (x.kind === 'pause' || !(x.pw > 0)) return true;
+        const nb = [out[q - 1], out[q + 1]].filter(y => y?.kind === 'pause' && y.pw > 0);
+        return !nb.length || x.pw >= 1.15 * nb.reduce((s, y) => s + y.pw, 0) / nb.length;
+      });
+      if (!ok) out.splice(0, out.length, ...backup);
     }
     // a few metres of walking after the last stop (e.g. 6 m) are no lap
     while (out.length && !(out[out.length - 1].kind === 'pause') && out[out.length - 1].d < 30 && !(out[out.length - 1].pw > 0)) out.pop();
