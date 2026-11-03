@@ -1382,7 +1382,7 @@
     });
     laps.splice(0, laps.length, ...res);
     meta.stopped = stops.length > 0 || res.some(x => x.stop);
-    laps.meta = meta;
+    laps.meta = meta; laps.recs = recs;            // records for fitPlan()
     return laps;
   }
 
@@ -1685,6 +1685,64 @@
     }
     return { found: groups.length, entries: out };
   }
+  // Plan in the power stream: laps of no use (auto lap every 5 km, button never pressed) and the power too noisy
+  // for fixed hard/easy groups (outdoor ride). The plan "8x3min (2min)" is laid over the 1-s power as a template:
+  // the start where the reps are hardest compared to the pauses wins, then each rep edge moves (±15 s) to the
+  // sharpest change of the power. Only time steps with a time pause in between; every rep must be ≥ 15 % above its pauses.
+  function fitPlan(recs, plan) {
+    const steps = [];
+    plan.forEach(e => {
+      if (e.type === 'rep') steps.push({ t: secs(e.time), p: NaN, note: e.note });
+      else if (e.type === 'pause' && steps.length) steps[steps.length - 1].p = secs(e.time);
+    });
+    if (!recs?.length || !steps.length || steps.some((r, i) => !(r.t > 0) || (i < steps.length - 1 && !(r.p > 0)))) return null;
+    const P = recs.filter(r => r.pw != null); if (P.length < 300) return null;
+    const t0 = P[0].ts, N = P[P.length - 1].ts - t0 + 1, pw = new Float64Array(N), hr = new Array(N).fill(null), dist = new Array(N).fill(null);
+    P.forEach(r => { pw[r.ts - t0] = r.pw; });
+    recs.forEach(r => { const i = r.ts - t0; if (i >= 0 && i < N) { if (r.hr > 0) hr[i] = r.hr; if (r.dist != null) dist[i] = r.dist; } });
+    const cs = new Float64Array(N + 1); for (let i = 0; i < N; i++) cs[i + 1] = cs[i] + pw[i];
+    const avg = (a, b) => b > a ? (cs[Math.min(N, b)] - cs[Math.max(0, a)]) / (Math.min(N, b) - Math.max(0, a)) : 0;
+    const off = []; let tot = 0;
+    steps.forEach((r, i) => { off.push(tot); tot += r.t + (i < steps.length - 1 ? r.p : 0); });
+    if (tot > N) return null;
+    const score = s => {
+      let ri = 0, rn = 0, pi = 0, pn = 0;
+      steps.forEach((r, i) => {
+        ri += cs[s + off[i] + r.t] - cs[s + off[i]]; rn += r.t;
+        if (i < steps.length - 1) { pi += cs[s + off[i] + r.t + r.p] - cs[s + off[i] + r.t]; pn += r.p; }
+      });
+      return { d: ri / rn - (pn ? pi / pn : 0), rep: ri / rn, pause: pn ? pi / pn : 0 };
+    };
+    let best = null, bs = 0;
+    for (let s = 0; s + tot <= N; s++) { const sc = score(s); if (!best || sc.d > best.d) { best = sc; bs = s; } }
+    if (!best || !(best.pause > 0 ? best.rep / best.pause >= 1.08 : best.rep > 0)) return null;
+    // exact edges: start = biggest rise, end = biggest drop (10-s windows), within ±15 s of the template
+    const edge = (j, up) => { let bj = j, bd = -Infinity; for (let k = j - 15; k <= j + 15; k++) { if (k < 10 || k > N - 10) continue; const d = (avg(k, k + 10) - avg(k - 10, k)) * (up ? 1 : -1); if (d > bd) { bd = d; bj = k; } } return bj; };
+    const reps = steps.map((r, i) => { const a = edge(bs + off[i], true); return { a, b: Math.max(a + 30, edge(bs + off[i] + r.t, false)), note: r.note }; });
+    const pieceOf = (a, b) => {
+      const h = hr.slice(a, b).filter(v => v != null), ds = dist.slice(a, b + 1).filter(v => v != null);
+      return { t: b - a, w: avg(a, b), d: ds.length > 1 ? ds[ds.length - 1] - ds[0] : NaN, hrMax: h.length ? Math.max(...h) : null, hrMin: h.length ? Math.min(...h) : null };
+    };
+    // every rep clearly above the pauses next to it (a steady ride with a plan that was not ridden finds nothing)
+    for (let i = 0; i < reps.length; i++) {
+      const w = avg(reps[i].a, reps[i].b), nb = [];
+      if (i) nb.push(avg(reps[i - 1].b, reps[i].a));
+      if (i < reps.length - 1) nb.push(avg(reps[i].b, reps[i + 1].a));
+      if (nb.some(p => w < 1.15 * p)) return null;
+    }
+    const out = [];
+    reps.forEach((r, i) => {
+      if (i) {                                     // the pause between two reps
+        const q = pieceOf(reps[i - 1].b, r.a);
+        out.push(E('pause', { time: fmtCs(q.t), dist: isFinite(q.d) ? fmtNum(Math.round(q.d * 10) / 10) : '', gps: q.d,
+          hr: q.hrMin != null ? String(q.hrMin) : '', hrs: [q.hrMax, q.hrMin].filter(v => v != null) }));
+      }
+      const q = pieceOf(r.a, r.b);
+      out.push(E('rep', { time: fmtCs(q.t), dist: isFinite(q.d) ? fmtNum(Math.round(q.d * 10) / 10) : '', gps: q.d, w: String(Math.round(q.w)), pw: q.w,
+        hr: q.hrMax != null ? String(q.hrMax) : '', hrs: [q.hrMax, q.hrMin].filter(v => v != null), note: r.note || '' }));
+    });
+    return out;
+  }
   function combine() {
     const plan = parsePlan($('impPlan').value);
     const nPlan = plan.entries.filter(e => e.type === 'rep').length;
@@ -1699,6 +1757,10 @@
         // only part of the plan found and the automatic recognition finds more reps: the plan does not fit (e.g. first rep 5:46 for 5 min)
         const nAuto = lapSlot.filter(e => e.type === 'rep').length;
         if (m.entries && m.found < nPlan && nAuto > m.found) m.entries = null;
+        // laps do not hold the plan: look for it in the power stream (FIT)
+        const fp = !m.entries && fitPlan(lapSlot.recs, plan.entries);
+        if (fp) { entries = fp; msg = `${auto}. D'Ronne passen net op de Plang „${plan.summary}“: déi ${nPlan} Reps goufen am Wattverlaf gesicht (Ufank/Enn op ± e puer Sekonnen).`; }
+        else
         if (m.entries) { entries = m.entries; msg = `${auto}. Plang „${plan.summary}“: ${m.found < nPlan ? `${m.found} vun ${nPlan}` : nPlan} Reps an de Runde fonnt, d'Runden dertëscht sinn d'Pausen.`; }
         else if (/^GPX/.test(lapSrc)) { entries = copy(); err = true; msg = `${auto}. De Plang „${plan.summary}“ ka net an de km-Splits gesicht ginn.`; }
         else { entries = copy(); err = true;
@@ -1800,7 +1862,7 @@
       if (['fit', 'zip', 'tcx', 'gpx'].includes(kind)) {
         status('Aktivitéit gëtt gelies …');
         const laps = await parseActivity(file, kind);
-        lapSlot = lapsToEntries(laps); lapSrc = kind === 'gpx' ? 'GPX (km-Splits)' : 'Auer-Fichier'; lapName = file.name || lapSrc;
+        lapSlot = lapsToEntries(laps); lapSlot.recs = laps.recs; lapSrc = kind === 'gpx' ? 'GPX (km-Splits)' : 'Auer-Fichier'; lapName = file.name || lapSrc;
         impMeta = laps.meta || null;
         lapInfo = metaText(impMeta);          // (Velo: stopped time is not a row of its own, the power decides)
         if (kind === 'gpx') lapInfo = ' ' + GPX_NOTE;
