@@ -1099,13 +1099,25 @@
     const withPw = rows.filter(r => r.pw > 0).length >= Math.max(2, rows.filter(r => r.t > 0).length / 2);
     // no watts: the power estimated from speed and climb (parseFIT, ep) where the stretches were cut by it, else the speed
     const withEp = !withPw && rows.filter(r => r.ep > 0).length >= Math.max(2, rows.filter(r => r.t > 0).length / 2);
-    const x = r => withPw ? (r.pw > 0 ? r.pw : 0) : withEp ? (r.ep > 0 ? r.ep : 0) : r.d > 0 && r.t > 0 ? r.d / r.t : 0;
+    // … but the heart rate first (30 s late, parseFIT hl) when it falls into two clear groups: a rep downhill or into
+    // the wind has little estimated power, the rider still works (two groups by Otsu, ≥ 6 % between them)
+    const hrThr = !withEp ? 0 : (() => {
+      const v = rows.filter(r => r.t >= 20 && r.hl > 0).map(r => r.hl).sort((a, b) => a - b), N = v.length;
+      if (N < 4) return 0;
+      const mean = a => a.reduce((s, q) => s + q, 0) / a.length;
+      let best = 0, bt = 0;
+      for (let k = 1; k < N; k++) { const b = k / N * (N - k) / N * (mean(v.slice(k)) - mean(v.slice(0, k))) ** 2; if (b > best) { best = b; bt = k; } }
+      return N - bt >= 2 && v[bt] / v[bt - 1] >= 1.06 ? (v[bt] + v[bt - 1]) / 2 : 0;
+    })(), withHr = hrThr > 0;
+    const x = r => withPw ? (r.pw > 0 ? r.pw : 0) : withHr ? (r.t >= 20 && r.hl > 0 ? r.hl : 0) : withEp ? (r.ep > 0 ? r.ep : 0)
+      : r.d > 0 && r.t > 0 ? r.d / r.t : 0;
     // reps = the hard group: sort and cut at the first drop of more than 25 %
     // laps of a few seconds (steps of a workout skipped with the lap button) are no rep and no pause
     const blip = r => r.t > 0 && r.t < 20 && rows.some(q => q.t >= 20);
     const xs = rows.filter(r => r.t > 0 && x(r) > 0 && !blip(r)).map(x).sort((a, b) => b - a);
     let thr = 0;
-    for (let i = 1; i < xs.length; i++) if (xs[i - 1] / xs[i] > 1.25) { thr = (xs[i] + xs[i - 1]) / 2; break; }
+    if (withHr) thr = hrThr;
+    else for (let i = 1; i < xs.length; i++) if (xs[i - 1] / xs[i] > 1.25) { thr = (xs[i] + xs[i - 1]) / 2; break; }
     const typed = rows.map(r => blip(r) ? 'skip' : x(r) > 0 && x(r) >= thr ? 'rep' : 'pause');
     // a plain ride with auto laps (e.g. every 5 km, the rest at the end): every lap counts, a short stop stays a pause
     const run = rows.filter(r => r.d > 0), L0 = run[0]?.d;
@@ -1437,11 +1449,13 @@
         res.push({ d: c.reduce((s, x) => s + (x.d || 0), 0), t: c.reduce((s, x) => s + x.t, 0), hrMax: hm.length ? Math.max(...hm) : undefined, kind: '' });
       } else res.push(...c);
     });
-    // no watts: every lap (also the laps pressed with the button) gets the estimated power for classify()
+    // no watts: every lap (also the laps pressed with the button) gets the estimated power and the heart rate 30 s later
+    // (the heart follows the effort late) for classify()
     if (EP) res.forEach(x => {
-      if (x.ep != null || x.start == null || x.end == null) return;
-      const es = EP.filter(r => r.ts >= x.start && r.ts < x.end);
-      if (es.length) x.ep = es.reduce((q, r) => q + r.pw, 0) / es.length;
+      if (x.start == null || x.end == null) return;
+      const es = EP.filter(r => r.ts >= x.start && r.ts < x.end), hs = hrIn(x.start + 30, x.end + 30);
+      if (x.ep == null && es.length) x.ep = es.reduce((q, r) => q + r.pw, 0) / es.length;
+      if (hs.length) x.hl = hs.reduce((q, v) => q + v, 0) / hs.length;
     });
     laps.splice(0, laps.length, ...res);
     meta.stopped = stops.length > 0 || res.some(x => x.stop);
