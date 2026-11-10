@@ -1118,6 +1118,19 @@
     let thr = 0;
     if (withHr) thr = hrThr;
     else for (let i = 1; i < xs.length; i++) if (xs[i - 1] / xs[i] > 1.25) { thr = (xs[i] + xs[i - 1]) / 2; break; }
+    // watts without a 25 % jump (openers in the warm-up, 169 / 139 / 124 / 96 W): the biggest jump of ≥ 15 %, but only
+    // when it gives a real interval pattern, i.e. at least two easy laps lying between hard ones
+    if (!thr && withPw) {
+      let bi = 0, br = 1.15;
+      for (let i = 1; i < xs.length; i++) if (xs[i - 1] / xs[i] >= br) { br = xs[i - 1] / xs[i]; bi = i; }
+      if (bi) {
+        const t = (xs[bi] + xs[bi - 1]) / 2, hard = rows.map(r => !blip(r) && x(r) >= t);
+        const a = hard.indexOf(true), b = hard.lastIndexOf(true);
+        let gaps = 0;
+        for (let i = a + 1; i <= b; i++) if (hard[i] && !hard[i - 1]) gaps++;
+        if (gaps >= 2) thr = t;
+      }
+    }
     const typed = rows.map(r => blip(r) ? 'skip' : x(r) > 0 && x(r) >= thr ? 'rep' : 'pause');
     // a plain ride with auto laps (e.g. every 5 km, the rest at the end): every lap counts, a short stop stays a pause
     const run = rows.filter(r => r.d > 0), L0 = run[0]?.d;
@@ -1728,9 +1741,12 @@
       let hit = null;
       for (let i = k; i < L.length && !hit; i++) {
         if (L[i].stop) continue;
-        let sum = 0;
+        let sum = 0, pMax = 0, pMin = Infinity;
         for (let j = i; j < L.length && !L[j].stop; j++) {
           sum += (byD ? L[j].d : L[j].t) || 0;
+          // laps of one rep have about the same watts: 4 × 1 min hard/easy (124/96 W) are no 4-min rep
+          if (L[j].e.pw > 0) { pMax = Math.max(pMax, L[j].e.pw); pMin = Math.min(pMin, L[j].e.pw); }
+          if (j > i && pMin < 0.8 * pMax) break;
           if (Math.abs(sum - T) / T <= 0.15) { hit = [i, j]; break; }
           if (sum > T * 1.15) break;
         }
