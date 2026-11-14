@@ -1,0 +1,254 @@
+{
+ "wochen": [
+  {
+   "kw": 47,
+   "jahr": 2026,
+   "tage": [
+    {
+     "label": "Méindeg, 16.11",
+     "datum": "2026-11-16",
+     "kurz": "Technik + 4x 150 + 3x 100 LIT",
+     "km": "3,3K",
+     "zeilen": [
+      {
+       "t": "400m (100K, 50KB, 150KA, 50R, 50B)",
+       "km": ""
+      },
+      {
+       "t": "4x 50m (25 3 Rechts, 3 links, 25K)",
+       "km": ""
+      },
+      {
+       "t": "1-200m K",
+       "km": ""
+      },
+      {
+       "t": "4x 50m (25 K Slowmotion, 25K) Schnorchel + Flossen",
+       "km": ""
+      },
+      {
+       "t": "1-200m K Schnorchel + Flossen",
+       "km": ""
+      },
+      {
+       "t": "4x 50m (25Te, 25K) eigene Baustellen",
+       "km": ""
+      },
+      {
+       "t": "1-200m K",
+       "km": "1,3 – 1,6"
+      },
+      {
+       "t": "4x 150m (50KB, 100KA) 20‘‘P",
+       "km": ""
+      },
+      {
+       "t": "3x 100m (25R, 50K, 25K gesteigert) 20‘‘P",
+       "km": ""
+      },
+      {
+       "t": "4x 50m K (immer so weit wie mögl. ohne Atmung) 20‘‘P",
+       "km": ""
+      },
+      {
+       "t": "2-400m KA + Pad  (die 2. (100) 200 schneller als die ersten)",
+       "km": "2,6 – 3,1"
+      },
+      {
+       "t": "200m bel. aus",
+       "km": "2,8 – 3,3"
+      }
+     ],
+     "plan": "4x50m; 1x200m; 4x50m; 1x200m; 4x50m; 1x200m; 4x150m (20s); 3x100m (20s); 4x50m (20s); 2x400m"
+    },
+    {
+     "label": "Dënschdeg, 17.11",
+     "datum": "2026-11-17",
+     "kurz": "Lagen + 4x 200 + 8x 50 gest. LIT",
+     "km": "3,5K",
+     "zeilen": [
+      {
+       "t": "3-400m bel. ein",
+       "km": ""
+      },
+      {
+       "t": "2x    (4x 50m (25Te, 25K) + 100m sauberes Kraulen)",
+       "km": "0,9 – 1,0"
+      },
+      {
+       "t": "2x 100m Lagen Beine + Flossen (BB -> SB) (immer bis vollständige Erholung pausieren)",
+       "km": ""
+      },
+      {
+       "t": "2x 100m Lagen Flossen",
+       "km": ""
+      },
+      {
+       "t": "2x 50m Minilagen Beine",
+       "km": ""
+      },
+      {
+       "t": "2x 50m Minilagen",
+       "km": ""
+      },
+      {
+       "t": "4x 25m S + Flossen",
+       "km": ""
+      },
+      {
+       "t": "2x 25m S",
+       "km": ""
+      },
+      {
+       "t": "250m (50R, 50K)",
+       "km": ""
+      },
+      {
+       "t": "2-4x 200m KA + Pad.",
+       "km": ""
+      },
+      {
+       "t": "4-8x 50m K (1-4 gesteigert)",
+       "km": ""
+      },
+      {
+       "t": "100m KB",
+       "km": "2,6 - 3,3"
+      },
+      {
+       "t": "50K, 50B, 50R, 50R-alt",
+       "km": "2,8 – 3,5"
+      }
+     ],
+     "plan": "8x50m; 2x100m; 2x100m; 2x50m; 2x50m; 4x25m; 2x25m; 2-4x200m; 4-8x50m"
+    },
+    {
+     "label": "Donneschdeg, 19.11",
+     "datum": "2026-11-19",
+     "kurz": "16x 100 gest. locker -> HIT + 8x 50 (25 Sprint)",
+     "km": "3,8K",
+     "zeilen": [
+      {
+       "t": "2-400m bel. ein",
+       "km": ""
+      },
+      {
+       "t": "8x 50m (25Te, 25K) (+ Flossen & Schnorchel je nach Übung)",
+       "km": ""
+      },
+      {
+       "t": "100m bel. locker",
+       "km": ""
+      },
+      {
+       "t": "4-8x 50m K (1-4 gesteigert, locker – HIT)",
+       "km": ""
+      },
+      {
+       "t": "100m locker bel.",
+       "km": "1,0 - 1,4"
+      },
+      {
+       "t": "Für alle anwesenden Anweisungen vor Ort (CSS Test)",
+       "km": ""
+      },
+      {
+       "t": "Sonst:",
+       "km": ""
+      },
+      {
+       "t": "4x 4x 100m K 1-4 gesteigert (locker – HIT) immer 20‘‘P",
+       "km": ""
+      },
+      {
+       "t": "4-8x 50m (25 Sprint, 25 locker) 20‘‘P",
+       "km": ""
+      },
+      {
+       "t": "(200m K + Flossen)",
+       "km": "2,8 - 3,6"
+      },
+      {
+       "t": "200m bel. aus",
+       "km": "3,0 – 3,8"
+      }
+     ],
+     "plan": "8x50m; 4-8x50m; 16x100m (20s); 4-8x50m (20s)"
+    },
+    {
+     "label": "Samschdeg, 21.11",
+     "datum": "2026-11-21",
+     "kurz": "100 500 100 + 8x 50 LIT",
+     "km": "4,5K",
+     "zeilen": [
+      {
+       "t": "100Bel., 50Beine, 100 bel. Arme, 50 Beine, 100R",
+       "km": ""
+      },
+      {
+       "t": "2x (4x 50m (25Te, 25K) + 100m sauberes Kraulen)",
+       "km": ""
+      },
+      {
+       "t": "4x 50m K (ungewohnte Seite atmen)",
+       "km": ""
+      },
+      {
+       "t": "2x 50m K (so weit wie möglich ohne Atmung",
+       "km": ""
+      },
+      {
+       "t": "2x 50m KB (25 Schnell, 25 locker)",
+       "km": "1,4"
+      },
+      {
+       "t": "100 KB",
+       "km": ""
+      },
+      {
+       "t": "200m K",
+       "km": ""
+      },
+      {
+       "t": "300m (50R, 100K)",
+       "km": ""
+      },
+      {
+       "t": "400m (50KB, 150KA)",
+       "km": ""
+      },
+      {
+       "t": "(500m K&R im 50er Wechsel + Flossen)",
+       "km": ""
+      },
+      {
+       "t": "400m KA + Pad. (K + Flossen)",
+       "km": ""
+      },
+      {
+       "t": "300m KA + Pad. (100locker, 50 mit etwas mehr Druck)",
+       "km": ""
+      },
+      {
+       "t": "200m (50R, 50B, 100K)",
+       "km": ""
+      },
+      {
+       "t": "100KB",
+       "km": ""
+      },
+      {
+       "t": "(8x 50m KA  10‘‘P)",
+       "km": "3,4 - 4,3"
+      },
+      {
+       "t": "200m bel. aus",
+       "km": "3,6 – 4,5"
+      }
+     ],
+     "plan": "8x50m; 4x50m; 2x50m; 2x50m"
+    }
+   ]
+  }
+ ]
+}

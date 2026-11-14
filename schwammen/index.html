@@ -198,6 +198,11 @@
   body.dragging #dropAll { display: grid; }
   @media print { #dropAll { display: none !important; } }
   #imp .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  .wp-body { padding-top: 6px; }
+  .wp-days { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+  .wp-days button.on { background: #0b6bcb; color: #fff; }
+  .wp-kurz { font-weight: 600; margin: 8px 0 4px; }
+  .wp-text { white-space: pre-wrap; font: inherit; font-size: 13px; background: rgba(127,127,127,.1); border-radius: 6px; padding: 8px 10px; margin: 0 0 8px; max-height: 220px; overflow: auto; }
 </style>
 </head>
 <body>
@@ -347,6 +352,19 @@
     <input type="file" id="impFileLaps">
   </label>
   <div id="impStatus" role="status"></div>
+  <details id="wp" hidden>
+    <summary>Wocheplang vum Trainer</summary>
+    <div class="wp-body">
+      <div class="row"><label for="wpWeek"><b>Woch</b></label><select id="wpWeek"></select><span id="wpDays" class="wp-days"></span></div>
+      <div id="wpKurz" class="wp-kurz"></div>
+      <pre id="wpText" class="wp-text"></pre>
+      <div class="row">
+        <button type="button" id="wpCopy">Kopéieren</button>
+        <button type="button" id="wpTake" title="Schreift d'Haaptserien (z.B. 4x150m (20s)) an d'Feld „Plang als Text“">An de Plang iwwerhuelen</button>
+        <span id="wpMsg" class="hint" style="margin:0"></span>
+      </div>
+    </div>
+  </details>
   <div class="row">
     <label for="impPlan" title="Wat geplangt war. D'Reps ginn an de Bunne vun der Auer gesicht."><b>Plang als Text</b></label>
     <input id="impPlan" autocorrect="off" spellcheck="false" style="flex:1; min-width:200px" placeholder="z.B. 400m Aschwammen; 10x200m (60s); 200m Ausschwammen">
@@ -1190,6 +1208,7 @@
   }
   const unreadText = u => u.length ? ` Net verstan: „${u.join('“, „')}“ – Plang verbesseren.` : '';
   function combine() {
+    wpAuto();
     const plan = parsePlan($('impPlan').value);
     const nPlan = plan.entries.filter(e => e.type === 'rep').length;
     planSummary = plan.summary;
@@ -1224,6 +1243,59 @@
     $('zLaps').classList.toggle('has', !!lapSlot);
     renderPreview();
   }
+
+  // ---------- Wocheplang (plang.json vum Trainer, erstallt mam Konverter Werkzeuge/schwammplang.py) ----------
+  let wpWeeks = null, wpLoaded = false, wpDay = null, wpAutoFor = '';
+  const wpEl = $('wp');
+  const dayMs = s => Date.parse(s + 'T12:00:00Z');
+  async function wpLoad() {
+    if (wpLoaded) return; wpLoaded = true;
+    try {
+      const r = await fetch('plang.json', { cache: 'no-cache' }); if (!r.ok) return;
+      wpWeeks = (await r.json()).wochen || [];
+    } catch (e) { return; }
+    if (!wpWeeks.length) { wpWeeks = null; return; }
+    $('wpWeek').innerHTML = wpWeeks.map((w, i) => `<option value="${i}">KW ${w.kw}${w.jahr ? ' · ' + w.jahr : ''}</option>`).join('');
+    wpEl.hidden = false;
+    wpPick(null);
+  }
+  // week + day for a date (a watch file) or, without date, today (else the newest week, first day)
+  function wpPick(date) {
+    const day = date || new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+    const i = wpWeeks.findIndex(w => { const a = dayMs(w.tage[0].datum), b = dayMs(w.tage[w.tage.length - 1].datum), t = dayMs(day); return t >= a - 2 * 864e5 && t <= b + 864e5; });
+    if (i < 0 && date) return false;
+    $('wpWeek').value = Math.max(i, 0);
+    const hit = wpWeeks[+$('wpWeek').value].tage.find(d => d.datum === day);
+    wpShow(hit || wpWeeks[+$('wpWeek').value].tage[0]);
+    if (hit && date) wpEl.open = true;
+    return true;
+  }
+  function wpShow(d) {
+    wpDay = d;
+    const tage = wpWeeks[+$('wpWeek').value].tage;
+    $('wpDays').innerHTML = tage.map((t, i) => `<button type="button" data-i="${i}"${t === d ? ' class="on"' : ''}>${t.label.replace(/^(\S{3})\S*,\s*/, '$1 ')}</button>`).join('');
+    $('wpKurz').textContent = `${d.kurz}${d.km ? ' · ' + d.km.replace(/K$/, ' km') : ''}`;
+    $('wpText').textContent = d.zeilen.map(z => z.t + (z.km ? '    ' + z.km : '')).join('\n');
+    $('wpMsg').textContent = '';
+  }
+  $('wpWeek').onchange = () => wpShow(wpWeeks[+$('wpWeek').value].tage[0]);
+  $('wpDays').onclick = e => { const b = e.target.closest('button'); if (b) wpShow(wpWeeks[+$('wpWeek').value].tage[+b.dataset.i]); };
+  $('wpCopy').onclick = async () => {
+    const t = `${wpDay.label}\n${wpDay.kurz}${wpDay.km ? '  ' + wpDay.km : ''}\n` + wpDay.zeilen.map(z => z.t + (z.km ? '  ' + z.km : '')).join('\n');
+    try { await navigator.clipboard.writeText(t); $('wpMsg').textContent = 'Kopéiert.'; }
+    catch (e) { const r = document.createRange(); r.selectNodeContents($('wpText')); getSelection().removeAllRanges(); getSelection().addRange(r); $('wpMsg').textContent = 'Markéiert – mat Cmd/Ctrl+C kopéieren.'; }
+  };
+  $('wpTake').onclick = () => {
+    if (!wpDay.plan) { $('wpMsg').textContent = 'Keng Serien an dësem Dag erkannt – Text kopéieren an eleng aschreiwen.'; return; }
+    $('impPlan').value = wpDay.plan; combine();
+    $('wpMsg').textContent = 'Plang gesat – w.e.gl. nokucken an upassen.';
+  };
+  // day of the watch file → pre-select it
+  const wpAuto = () => {
+    const date = impMeta && metaFields(impMeta).date;
+    if (!wpWeeks || !date || wpAutoFor === date) return;
+    wpAutoFor = date; wpPick(date);
+  };
   let planTimer = 0;
   $('impPlan').addEventListener('input', () => { clearTimeout(planTimer); planTimer = setTimeout(combine, 500); });
   $('impCancel').onclick = () => dlg.close();
@@ -1238,7 +1310,7 @@
     entries = []; impMeta = null; lapSlot = null; lapInfo = ''; lapName = ''; status('');
     $('gotLaps').textContent = ''; $('zLaps').classList.remove('has');
     $('impPlan').value = hasXPlan(S.training) ? S.training.replace(/\s+\+\s+/g, '; ') : '';
-    renderPreview();
+    renderPreview(); wpAutoFor = ''; wpLoad();
     $('impFileLaps').value = '';
     dlg.showModal();
   };
