@@ -203,6 +203,14 @@
   .wp-days button.on { background: #0b6bcb; color: #fff; }
   .wp-kurz { font-weight: 600; margin: 8px 0 4px; }
   .wp-text { white-space: pre-wrap; font: inherit; font-size: 13px; background: rgba(127,127,127,.1); border-radius: 6px; padding: 8px 10px; margin: 0 0 8px; max-height: 220px; overflow: auto; }
+  dialog#info { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 18px 20px; border: 1px solid #bbb; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+  dialog#info::backdrop { background: rgba(20,25,35,.45); }
+  #info h2 { font: 900 20px "Titillium Web", Inter, sans-serif; color: var(--sb-blue); text-transform: uppercase; margin: 0 0 8px; }
+  #info h3 { font-size: 15px; margin: 14px 0 4px; }
+  #info dl { display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; margin: 0; font-size: 14px; }
+  #info dt { font-weight: 700; } #info dd { margin: 0; }
+  #info .actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+  @media print { #info { display: none !important; } }
 </style>
 </head>
 <body>
@@ -213,6 +221,7 @@
   <button id="btnNew" title="Trainingsdaten eidelmaachen, Num/Schwellen/Bassin bleiwen">Neien Training</button>
   <button id="btnSave" title="Als JSON-Fichier späicheren">Späicheren</button>
   <button id="btnLoad" title="JSON-Fichier lueden">Lueden</button>
+  <button id="btnInfo" title="Abkierzungen a Erklärunge fir d'Schwammtraining an d'Pläng">Infoen / Abkierzungen</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <a class="btn" href="https://form.jotform.com/262735789931069" target="_blank" rel="noopener" title="Problem gemellt oder Iddi? Kuerze Formulaire fir d'Testpersounen">Feedback</a>
   <button id="btnPdf" class="primary">PDF fir den Trainer</button>
@@ -341,6 +350,45 @@
 </div>
 
 <div id="dropAll">FIT-Fichier hei lassgoen</div>
+
+<dialog id="info" aria-labelledby="infoTitle">
+  <h2 id="infoTitle">Abkierzungsverzeechnes</h2>
+  <p class="hint" style="color:var(--muted);font-size:13px;margin:0 0 4px">Erklärunge fir d'Schwammpläng vum Trainer.</p>
+  <h3>Intensitéit</h3>
+  <dl>
+    <dt>LIT</dt><dd>Low Intensity Training</dd>
+    <dt>HIIT</dt><dd>High Intensity Interval Training</dd>
+    <dt>TH</dt><dd>Threshold (Schwell)</dd>
+    <dt>SwSp</dt><dd>Sweet Spot (e bëssen ënnert der Schwell)</dd>
+    <dt>Tempo</dt><dd>tëscht LIT a SwSp</dd>
+  </dl>
+  <h3>Schwammen</h3>
+  <dl>
+    <dt>K</dt><dd>Kraul</dd>
+    <dt>B</dt><dd>Broscht</dd>
+    <dt>R</dt><dd>Réck</dd>
+    <dt>S</dt><dd>Delfin (Schmetterling)</dd>
+    <dt>A</dt><dd>Äerm (also mam Pull Buoy tëscht de Been)</dd>
+    <dt>B</dt><dd>Been (mam Brett an den Hänn)</dd>
+    <dt>Pad.</dt><dd>Paddles</dd>
+    <dt>Flos.</dt><dd>Flossen</dd>
+    <dt>Te</dt><dd>Technik</dd>
+    <dt>P</dt><dd>Paus an '' (Sekonnen) oder ' (Minutten)</dd>
+    <dt>SP</dt><dd>Satzpaus</dd>
+    <dt>Lagen</dt><dd>S – R – B – K</dd>
+    <dt>Lagen Ost</dt><dd>wéi Lagen, just Delfin a Broscht nëmmen ½ oder ⅓ vun de Strecke vu Réck a Kraul. Bei 200 m: 25 S, 75 R, 25 B, 75 K</dd>
+    <dt>Minilagen</dt><dd>Lagen op 50 Meter</dd>
+    <dt>Ein / Aus</dt><dd>locker Ein- oder Ausschwammen</dd>
+    <dt>Bel.</dt><dd>beliebeg</dd>
+    <dt>i.W.</dt><dd>am Wiessel</dd>
+  </dl>
+  <h3>Beispiller</h3>
+  <dl>
+    <dt>KA + Pad.</dt><dd>Kraul mam Pull Buoy a Paddles</dd>
+    <dt>RB</dt><dd>Réckelag, Brett no hannen, just Beenaarbecht</dd>
+  </dl>
+  <div class="actions"><button id="infoClose" class="primary">Zou</button></div>
+</dialog>
 
 <dialog id="imp" aria-labelledby="impTitle">
   <h2 id="impTitle">Training importéieren</h2>
@@ -1298,6 +1346,8 @@
   };
   let planTimer = 0;
   $('impPlan').addEventListener('input', () => { clearTimeout(planTimer); planTimer = setTimeout(combine, 500); });
+  $('btnInfo').onclick = () => $('info').showModal();
+  $('infoClose').onclick = () => $('info').close();
   $('impCancel').onclick = () => dlg.close();
   $('impApply').onclick = () => {
     if (hasData() && !confirm('Et sinn schonn Donnéeën an de Reps. Iwwerschreiwen?')) return;
