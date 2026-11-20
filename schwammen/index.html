@@ -421,6 +421,7 @@
   <div class="row">
     <label for="impPlan" title="Wat geplangt war. D'Reps ginn an de Bunne vun der Auer gesicht."><b>Plang als Text</b></label>
     <input id="impPlan" autocorrect="off" spellcheck="false" style="flex:1; min-width:200px" placeholder="z.B. 400m Aschwammen; 10x200m (60s); 200m Ausschwammen">
+    <button type="button" id="impPlanClear" title="Plang läschen" aria-label="Plang läschen" style="flex:none; padding:4px 11px">×</button>
   </div>
   <details>
     <summary>Schreifweis fir Trainingspläng</summary>
@@ -1367,6 +1368,8 @@
     return { found, entries: out };
   }
   const unreadText = u => u.length ? ` Net verstan: „${u.join('“, „')}“ – Plang verbesseren.` : '';
+  // × next to the plan field: empty it, the reps then come from the watch laps alone
+  $('impPlanClear').onclick = () => { $('impPlan').value = ''; combine(); $('impPlan').focus(); };
   function combine() {
     wpAuto();
     const plan = parsePlan($('impPlan').value);

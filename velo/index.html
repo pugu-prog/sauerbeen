@@ -399,6 +399,7 @@
   <div class="row">
     <label for="impPlan" title="Wat geplangt war. D'Reps ginn an de Runde vun der Auer gesicht, d'Runden dertëscht sinn d'Pausen."><b>Plang als Text</b></label>
     <input id="impPlan" autocorrect="off" spellcheck="false" style="flex:1; min-width:200px" placeholder="z.B. 4x8min (4min) – kënnt aus dem Plang oder selwer aginn">
+    <button type="button" id="impPlanClear" title="Plang läschen" aria-label="Plang läschen" style="flex:none; padding:4px 11px">×</button>
   </div>
   <details>
     <summary>Schreifweis fir Trainingspläng</summary>
@@ -1949,6 +1950,8 @@
     out.est = !!EP;
     return out;
   }
+  // × next to the plan field: empty it, the reps then come from the watch laps alone
+  $('impPlanClear').onclick = () => { $('impPlan').value = ''; combine(); $('impPlan').focus(); };
   function combine() {
     const plan = parsePlan($('impPlan').value);
     const nPlan = plan.entries.filter(e => e.type === 'rep').length;
