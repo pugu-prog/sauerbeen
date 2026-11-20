@@ -1471,7 +1471,8 @@
   $('btnImport').onclick = () => {
     entries = []; impMeta = null; lapSlot = null; lapInfo = ''; lapName = ''; status('');
     $('gotLaps').textContent = ''; $('zLaps').classList.remove('has');
-    $('impPlan').value = hasXPlan(S.training) ? S.training.replace(/\s+\+\s+/g, '; ') : '';
+    // only while the table is still empty: with reps already in it, "Training" belongs to THAT session (an old plan would be forced onto the new laps)
+    $('impPlan').value = !hasData() && hasXPlan(S.training) ? S.training.replace(/\s+\+\s+/g, '; ') : '';
     renderPreview(); wpAutoFor = ''; wpLoad();
     $('impFileLaps').value = '';
     dlg.showModal();
