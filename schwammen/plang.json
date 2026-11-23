@@ -1,6 +1,252 @@
 {
  "wochen": [
   {
+   "kw": 48,
+   "jahr": 2026,
+   "tage": [
+    {
+     "label": "Méindeg, 23.11",
+     "datum": "2026-11-23",
+     "kurz": "Technik + 4x 400m LIT",
+     "km": "3,3K",
+     "zeilen": [
+      {
+       "t": "200m bel. ein",
+       "km": ""
+      },
+      {
+       "t": "200m (50 Beine, 50 Arme, 50R, 50B)",
+       "km": ""
+      },
+      {
+       "t": "4x 50m Technik (50m am Stück) + Schnorchel",
+       "km": ""
+      },
+      {
+       "t": "100m sauberes Kraulen + Schnorchel",
+       "km": ""
+      },
+      {
+       "t": "4x 50m Technik + Flossen",
+       "km": ""
+      },
+      {
+       "t": "100m sauberes Kraulen + Flossen",
+       "km": ""
+      },
+      {
+       "t": "4x 50m (25Te, 25K)",
+       "km": ""
+      },
+      {
+       "t": "100m sauberes Kraulen",
+       "km": "1,3"
+      },
+      {
+       "t": "3 - 4x 400m 30‘‘P",
+       "km": ""
+      },
+      {
+       "t": "1: K        2: 25B, 25R, 50Beine, 100KA          (3: K)                4: K + Flossen",
+       "km": "2,5 - 2,9"
+      },
+      {
+       "t": "1-200m KB + Flossen",
+       "km": ""
+      },
+      {
+       "t": "200m bel. aus",
+       "km": "2,8 – 3,3"
+      }
+     ],
+     "plan": "4x50m Technik 50m am Stück mat Schnorchel; 4x50m Technik mat Flossen; 4x50m 25 Technik, 25 Kraul; 3-4x400m (30s); 1x200m Kraul Been mat Flossen"
+    },
+    {
+     "label": "Dënschdeg, 24.11",
+     "datum": "2026-11-24",
+     "kurz": "Schmett + 2x 200KA + Sprints + 400 LIT",
+     "km": "3,4K",
+     "zeilen": [
+      {
+       "t": "2 – 400m bel. ein",
+       "km": ""
+      },
+      {
+       "t": "8x 50 (25Te, 25K) Abwechslung rein bringen mit Flossen und Schnorchel",
+       "km": ""
+      },
+      {
+       "t": "200m sauberes Kraulen mit Flossen",
+       "km": "0,8 – 1,0"
+      },
+      {
+       "t": "8 - 10x 50m (25 S, 25K) + Flossen 15‘‘P",
+       "km": ""
+      },
+      {
+       "t": "2x 200m KA 20‘‘P",
+       "km": ""
+      },
+      {
+       "t": "100m locker bel.",
+       "km": ""
+      },
+      {
+       "t": "6 - 8x 50m (15K Sprint, 35 locker bel.) 15‘‘P",
+       "km": ""
+      },
+      {
+       "t": "200m KB (jeweils 50m in jeder Lage (Bauch Rücken Seite))",
+       "km": ""
+      },
+      {
+       "t": "4x 50m (25m K Sprint, 25 R) 15‘‘P",
+       "km": ""
+      },
+      {
+       "t": "2-400m K + Flossen",
+       "km": "2,6 - 3,2"
+      },
+      {
+       "t": "200m bel. aus",
+       "km": "2,8 – 3,4"
+      }
+     ],
+     "plan": "8-10x50m (15s) 25 Delfin, 25 Kraul mat Flossen; 2x200m (20s) Kraul Äerm; 4x50m (15s) 25m Kraul Sprint, 25 Réck; 2x400m Kraul mat Flossen"
+    },
+    {
+     "label": "Donneschdeg, 26.11",
+     "datum": "2026-11-26",
+     "kurz": "4x 4x 100m TH / HIIT",
+     "km": "3,8K",
+     "zeilen": [
+      {
+       "t": "2-400m bel. ein",
+       "km": ""
+      },
+      {
+       "t": "8x 50m (25Te, 25K) (+ Flossen & Schnorchel je nach Übung)",
+       "km": ""
+      },
+      {
+       "t": "100m bel. locker",
+       "km": ""
+      },
+      {
+       "t": "4-8x 50m K (1-4 gesteigert, locker – HIT)",
+       "km": ""
+      },
+      {
+       "t": "100m locker bel.",
+       "km": "1,0 - 1,4"
+      },
+      {
+       "t": "4x 100m TH 15‘‘P",
+       "km": ""
+      },
+      {
+       "t": "100m bel. locker",
+       "km": ""
+      },
+      {
+       "t": "4x 100m HIIT 30‘‘P",
+       "km": ""
+      },
+      {
+       "t": "100m bel. locker",
+       "km": ""
+      },
+      {
+       "t": "4x 100m TH + Paddles Arme 15‘‘P",
+       "km": ""
+      },
+      {
+       "t": "100m bel. locker",
+       "km": ""
+      },
+      {
+       "t": "(4x 100m HIIT + Flossen 30‘‘P)",
+       "km": ""
+      },
+      {
+       "t": "(100m bel. locker)",
+       "km": "2,5 - 3,4"
+      },
+      {
+       "t": "200m Beine + Flossen (50SB in Rückenlage, 50KB, 50SB in Bauchlage, 50KB)",
+       "km": ""
+      },
+      {
+       "t": "200m bel. aus",
+       "km": "2,9 – 3,8"
+      }
+     ],
+     "plan": "8x50m 25 Technik, 25 Kraul mat Flossen & Schnorchel je nach Übung; 4-8x50m Kraul 1-4 gesteigert, locker – HIT; 4x100m (15s) TH; 4x100m (30s) HIIT; 4x100m (15s) TH mat Paddles Arme"
+    },
+    {
+     "label": "Samschdeg, 28.11",
+     "datum": "2026-11-28",
+     "kurz": "600 + 2x 500 + 2x 400 LIT",
+     "km": "4,5K",
+     "zeilen": [
+      {
+       "t": "3-400m bel. ein",
+       "km": ""
+      },
+      {
+       "t": "4x 50m (25Te, 25K)",
+       "km": ""
+      },
+      {
+       "t": "100m sauberes Kraulen",
+       "km": ""
+      },
+      {
+       "t": "3-4x 100m (25Te, 25K Faust, 25K, 25bel.)",
+       "km": ""
+      },
+      {
+       "t": "200m K sauber + Schnorchel",
+       "km": "1,1 - 1,3"
+      },
+      {
+       "t": "600m K",
+       "km": ""
+      },
+      {
+       "t": "200m (50R, 50K)",
+       "km": ""
+      },
+      {
+       "t": "2x 4-500m KA",
+       "km": ""
+      },
+      {
+       "t": "200m KB + Flossen",
+       "km": ""
+      },
+      {
+       "t": "2x 3-400m KA + Pad. (jeweils 3x 25m mit mehr Druck)",
+       "km": ""
+      },
+      {
+       "t": "100m SB in Rückenlage + Flossen",
+       "km": ""
+      },
+      {
+       "t": "(100m KB)",
+       "km": "3,6 - 4,3"
+      },
+      {
+       "t": "200m bel. aus",
+       "km": "3,8 – 4,5"
+      }
+     ],
+     "plan": "4x50m 25 Technik, 25 Kraul; 3-4x100m 25 Technik, 25 Kraul Faust, 25 Kraul, 25bel."
+    }
+   ]
+  },
+  {
    "kw": 47,
    "jahr": 2026,
    "tage": [
