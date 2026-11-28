@@ -1841,6 +1841,7 @@
       const d = m.tzOffset != null ? new Date(utc + m.tzOffset * 1000) : new Date(utc - new Date(utc).getTimezoneOffset() * 60000);
       o.date = d.toISOString().slice(0, 10); o.clock = d.toISOString().slice(11, 16);
     }
+    if (m.indoor) { o.indoor = true; return o; }          // trainer / virtual ride: no place, no weather (the GPS is the virtual route)
     if (m.temp != null) o.temp = String(m.temp);
     if (m.lat != null && m.lon != null) { o.lat = m.lat; o.lon = m.lon; }
     if (m.wind != null) o.wind = dec(m.wind, 1).replace(/,0$/, '');
@@ -1851,7 +1852,7 @@
     if (o.date) parts.push(`${o.date.split('-').reverse().join('.')} ${o.clock}`);
     if (o.temp) parts.push(`${o.temp} °C`);
     if (o.wind) parts.push(`Wand ${o.wind} km/h`);
-    if (m && m.temp == null) parts.push(m.sensorTemp != null ? `keng Wiederdonnéeën (Auer-Sensor ${m.sensorTemp} °C, net iwwerholl)` : 'keng Wiederdonnéeën');
+    if (m && !m.indoor && m.temp == null) parts.push(m.sensorTemp != null ? `keng Wiederdonnéeën (Auer-Sensor ${m.sensorTemp} °C, net iwwerholl)` : 'keng Wiederdonnéeën');
     return parts.length ? ' ' + parts.join(' · ') + '.' : '';
   };
 
@@ -1872,6 +1873,8 @@
     // weather of the last training must not stay: the file's own values (Garmin), else Open-Meteo fills them anew
     S.temp = mf.temp || ''; S.wind = mf.wind || ''; S.wxAuto = null;
     let place = '';
+    S.noWx = !!mf.indoor;
+    if (mf.indoor) S.place = S.wxLat = S.wxLon = '';
     if (mf.lat != null) { S.wxLat = mf.lat; S.wxLon = mf.lon; place = await placeName(mf.lat, mf.lon); if (place) S.place = place; }
     fillMeta(); calc(); maybeWeather();
     return place;
@@ -2398,7 +2401,7 @@
   function wxIsAuto() { return !!(S.wxAuto && S.temp === S.wxAuto.temp && S.wind === S.wxAuto.wind); }
   const indoor = () => /indoor|bannen|rolle|roll|trainer|zwift|home/i.test(S.surface || '');
   async function maybeWeather() {
-    if (!S.date || !S.clock || indoor()) return;
+    if (!S.date || !S.clock || indoor() || (S.noWx && !String(S.place || '').trim())) return;   // empty place would mean Diekirch
     const auto = wxIsAuto();
     if (!auto && S.temp && S.wind) return;                              // typed by the runner → keep
     const when = new Date(S.date + 'T' + S.clock);
