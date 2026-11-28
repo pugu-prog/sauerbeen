@@ -246,14 +246,14 @@
     <label for="name">Num</label>
     <input id="name" data-k="name" autocorrect="off" spellcheck="false">
     <label for="css" title="Critical Swim Speed: d'Tempo pro 100 m, dat een ouni Paus laang halen kann (Schwammschwell)">CSS (Schwell)</label>
-    <div class="unit"><input id="css" data-k="css" class="num tm" inputmode="decimal" placeholder="1:45"><span>/100 m</span></div>
+    <div class="unit"><input id="css" data-k="css" class="num tm" inputmode="text" autocorrect="off" autocapitalize="off" placeholder="1:45"><span>/100 m</span></div>
     <label for="hrThr">HR Schwell</label>
     <div><input id="hrThr" data-k="hrThr" class="num" inputmode="numeric" placeholder="150"></div>
     <details class="cssbox noprint" id="cssBox">
       <summary>CSS net bekannt? Aus engem 400 m + 200 m Test rechnen</summary>
       <div class="row">
-        400 m an <input id="t400" class="num" inputmode="decimal" placeholder="7:20">
-        200 m an <input id="t200" class="num" inputmode="decimal" placeholder="3:25">
+        400 m an <input id="t400" class="num" inputmode="text" autocorrect="off" autocapitalize="off" placeholder="7:20">
+        200 m an <input id="t200" class="num" inputmode="text" autocorrect="off" autocapitalize="off" placeholder="3:25">
         <span id="cssCalc"></span>
         <button type="button" id="cssTake" disabled>als CSS iwwerhuelen</button>
       </div>
@@ -295,7 +295,7 @@
       </tr>
       <tr>
         <td style="border:0" colspan="3"></td><td class="right">MIN</td>
-        <td class="cs" id="refPaceMin"><input class="num ref" data-k="rPaceMin" inputmode="decimal" title="Ännere geet; eidel maachen = nees d'Formel (CSS + 8 %)"></td>
+        <td class="cs" id="refPaceMin"><input class="num ref" data-k="rPaceMin" inputmode="text" autocorrect="off" autocapitalize="off" title="Ännere geet; eidel maachen = nees d'Formel (CSS + 8 %)"></td>
         <td style="border:0" colspan="2"></td>
         <td class="cs" id="refHrMin"><input class="num ref" data-k="rHrMin" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel (HR Schwell − 15)"></td>
         <td class="cs" id="refPauseMin"><input class="num ref" data-k="rPhrMin" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel (HR Schwell − 30)"></td>
@@ -303,7 +303,7 @@
       </tr>
       <tr>
         <td style="border:0" colspan="3"></td><td class="right">MAX</td>
-        <td class="cs" id="refPaceMax"><input class="num ref" data-k="rPaceMax" inputmode="decimal" title="Ännere geet; eidel maachen = nees d'Formel (CSS − 8 %)"></td>
+        <td class="cs" id="refPaceMax"><input class="num ref" data-k="rPaceMax" inputmode="text" autocorrect="off" autocapitalize="off" title="Ännere geet; eidel maachen = nees d'Formel (CSS − 8 %)"></td>
         <td style="border:0" colspan="2"></td>
         <td class="cs" id="refHrMax"><input class="num ref" data-k="rHrMax" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel (HR Schwell + 25)"></td>
         <td class="cs" id="refPauseMax"><input class="num ref" data-k="rPhrMax" inputmode="numeric" title="Ännere geet; eidel maachen = nees d'Formel (HR Schwell + 10)"></td>
@@ -545,9 +545,9 @@
         <td>${i + 1}</td>
         <td class="in"><input data-r="${i}" data-f="dist" class="num" inputmode="decimal" list="distList"></td>
         <td class="in"><input data-r="${i}" data-f="stroke" list="strokeList" autocomplete="off" autocorrect="off" spellcheck="false"></td>
-        <td class="in"><input data-r="${i}" data-f="time" class="num tm" inputmode="decimal"></td>
+        <td class="in"><input data-r="${i}" data-f="time" class="num tm" inputmode="text" autocorrect="off" autocapitalize="off"></td>
         <td class="out" data-c="pace"></td>
-        <td class="in cs" data-c="spl"><input data-r="${i}" data-f="spl" class="num" inputmode="decimal"></td>
+        <td class="in cs" data-c="spl"><input data-r="${i}" data-f="spl" class="num" inputmode="text" autocorrect="off" autocapitalize="off"></td>
         <td class="out" data-c="swolf"></td>
         <td class="in cs" data-c="hr"><input data-r="${i}" data-f="hr" class="num" inputmode="numeric"></td>
         <td></td>
@@ -556,7 +556,7 @@
       </tr>
       <tr class="pause" data-i="${i}">
         <td>Paus</td><td></td><td></td>
-        <td class="in"><input data-r="${i}" data-f="pTime" class="num tm" inputmode="decimal"></td>
+        <td class="in"><input data-r="${i}" data-f="pTime" class="num tm" inputmode="text" autocorrect="off" autocapitalize="off"></td>
         <td></td><td></td><td></td><td></td>
         <td class="in cs" data-c="phr"><input data-r="${i}" data-f="pHr" class="num" inputmode="numeric"></td>
         <td><input data-r="${i}" data-f="pNote" autocorrect="off" spellcheck="false"></td>
